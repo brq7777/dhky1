@@ -35,6 +35,9 @@
                 </div>
                 <div class="user-info">
                     <span class="welcome-text">مرحباً، {{ current_user.email }}</span>
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-admin">🛠️ لوحة الإدارة</a>
+                    {% endif %}
                     <a href="{{ url_for('logout') }}" class="logout-btn">تسجيل الخروج</a>
                 </div>
                 <div class="status-indicator">

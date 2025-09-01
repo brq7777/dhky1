@@ -392,13 +392,26 @@
                 </div>
             </div>
             
+            <!-- موافقة على الشروط والأحكام -->
+            <div style="background: rgba(239, 246, 255, 0.1); border: 2px solid #3b82f6; border-radius: 10px; padding: 20px; margin: 20px 0;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <input type="checkbox" id="terms-checkbox" required style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="terms-checkbox" style="font-size: 1rem; cursor: pointer; color: white;">
+                        أوافق على <a href="{{ url_for('terms') }}" target="_blank" style="color: #3b82f6; text-decoration: underline; font-weight: bold;">الشروط والأحكام</a> و <strong>إخلاء المسؤولية</strong>
+                    </label>
+                </div>
+                <p style="font-size: 0.9rem; color: #fbbf24; text-align: center; margin: 0;">
+                    ⚠️ يجب الموافقة على الشروط والأحكام وإخلاء المسؤولية قبل الاشتراك في الخدمة
+                </p>
+            </div>
+
             <!-- خيارات الشراء -->
             {% if subscription.is_trial and subscription.trial_remaining_hours > 0 %}
                 <div class="payment-options">
                     <div class="payment-option">
                         <h4>⚡ شراء فوري - الدفع الإلكتروني</h4>
                         <p>تفعيل مباشر خلال ثوانٍ عبر البطاقة الائتمانية</p>
-                        <form method="POST" action="{{ url_for('create_stripe_session') }}">
+                        <form method="POST" action="{{ url_for('create_stripe_session') }}" onsubmit="return checkTermsAgreement()">
                             <button type="submit" class="subscribe-btn primary">
                                 اشتري الآن - {{ subscription.amount }} {{ subscription.currency }}
                             </button>
@@ -410,7 +423,7 @@
                     <div class="payment-option">
                         <h4>🏦 شراء بالتحويل البنكي</h4>
                         <p>ادفع عبر التحويل البنكي وسيتم تفعيل المنتج خلال 24 ساعة</p>
-                        <a href="{{ url_for('bank_transfer_payment') }}" class="subscribe-btn secondary">
+                        <a href="{{ url_for('bank_transfer_payment') }}" class="subscribe-btn secondary" onclick="return checkTermsAgreement()">
                             إتمام الشراء عبر التحويل
                         </a>
                     </div>
@@ -467,6 +480,15 @@
             }).catch(function() {
                 alert('رقم الإيبان: ' + ibanText);
             });
+        }
+
+        function checkTermsAgreement() {
+            const checkbox = document.getElementById('terms-checkbox');
+            if (!checkbox.checked) {
+                alert('يجب الموافقة على الشروط والأحكام أولاً');
+                return false;
+            }
+            return true;
         }
     </script>
 </body>

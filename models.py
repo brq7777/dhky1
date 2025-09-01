@@ -220,3 +220,31 @@ class PaymentRequest(db.Model):
     
     def __repr__(self):
         return f'<PaymentRequest {self.status} for User {self.user_id}>'
+
+
+class Comment(db.Model):
+    """نموذج التعليقات على المنتج"""
+    __tablename__ = 'comments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    rating = db.Column(db.Integer)  # تقييم من 1 إلى 5 نجوم
+    is_approved = db.Column(db.Boolean, default=False)  # موافقة المدير
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # علاقة مع المستخدم
+    user = db.relationship('User', backref=db.backref('comments', lazy=True))
+    
+    def approve(self):
+        """الموافقة على التعليق"""
+        self.is_approved = True
+        db.session.commit()
+    
+    def reject(self):
+        """رفض التعليق"""
+        db.session.delete(self)
+        db.session.commit()
+    
+    def __repr__(self):
+        return f'<Comment by {self.user.email if self.user else "Unknown"}>'

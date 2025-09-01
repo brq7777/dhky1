@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # إستيراد نموذج المستخدم وإعداد قاعدة البيانات
-from models import db, User, Subscription, DeviceFingerprint, PaymentRequest
+from models import db, User, Subscription, DeviceFingerprint, PaymentRequest, Comment
 db.init_app(app)
 
 # إعداد Flask-Login
@@ -196,6 +196,124 @@ def bank_transfer_payment():
     }
     
     return render_template('bank_transfer.html', bank_info=bank_info)
+
+# مسارات الإدارة
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    """لوحة الإدارة - للمدير فقط"""
+    if not current_user.is_admin:
+        flash('ليس لديك صلاحية للوصول لهذه الصفحة', 'error')
+        return redirect(url_for('index'))
+    
+    # إحصائيات سريعة
+    stats = {
+        'total_users': User.query.count(),
+        'active_subscribers': User.query.join(Subscription).filter(
+            Subscription.status == 'active'
+        ).count(),
+        'trial_users': User.query.join(Subscription).filter(
+            Subscription.status == 'trial'
+        ).count(),
+        'pending_payments': PaymentRequest.query.filter_by(status='pending').count()
+    }
+    
+    # طلبات الدفع المعلقة
+    payment_requests = PaymentRequest.query.filter_by(status='pending').order_by(
+        PaymentRequest.created_at.desc()
+    ).all()
+    
+    # جميع المستخدمين
+    users = User.query.order_by(User.created_at.desc()).all()
+    
+    # التعليقات المعلقة
+    pending_comments = Comment.query.filter_by(is_approved=False).order_by(
+        Comment.created_at.desc()
+    ).all()
+    
+    return render_template('admin.html', 
+                         stats=stats, 
+                         payment_requests=payment_requests,
+                         users=users,
+                         pending_comments=pending_comments)
+
+@app.route('/admin/approve-payment/<int:request_id>', methods=['POST'])
+@login_required
+def admin_approve_payment(request_id):
+    """الموافقة على طلب دفع"""
+    if not current_user.is_admin:
+        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
+        return redirect(url_for('index'))
+    
+    payment_request = PaymentRequest.query.get_or_404(request_id)
+    
+    try:
+        payment_request.approve_payment(current_user.id)
+        flash(f'تم الموافقة على طلب الدفع للمستخدم {payment_request.user.email}', 'success')
+    except Exception as e:
+        flash(f'خطأ في الموافقة على الطلب: {str(e)}', 'error')
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/reject-payment/<int:request_id>', methods=['POST'])  
+@login_required
+def admin_reject_payment(request_id):
+    """رفض طلب دفع"""
+    if not current_user.is_admin:
+        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
+        return redirect(url_for('index'))
+    
+    payment_request = PaymentRequest.query.get_or_404(request_id)
+    
+    try:
+        payment_request.reject_payment(current_user.id, 'تم الرفض من قبل المدير')
+        flash(f'تم رفض طلب الدفع للمستخدم {payment_request.user.email}', 'info')
+    except Exception as e:
+        flash(f'خطأ في رفض الطلب: {str(e)}', 'error')
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/approve-comment/<int:comment_id>', methods=['POST'])
+@login_required
+def admin_approve_comment(comment_id):
+    """الموافقة على تعليق"""
+    if not current_user.is_admin:
+        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
+        return redirect(url_for('index'))
+    
+    comment = Comment.query.get_or_404(comment_id)
+    
+    try:
+        comment.approve()
+        flash('تم الموافقة على التعليق', 'success')
+    except Exception as e:
+        flash(f'خطأ في الموافقة على التعليق: {str(e)}', 'error')
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/reject-comment/<int:comment_id>', methods=['POST'])
+@login_required
+def admin_reject_comment(comment_id):
+    """رفض وحذف تعليق"""
+    if not current_user.is_admin:
+        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
+        return redirect(url_for('index'))
+    
+    comment = Comment.query.get_or_404(comment_id)
+    
+    try:
+        comment.reject()
+        flash('تم رفض وحذف التعليق', 'info')
+    except Exception as e:
+        flash(f'خطأ في رفض التعليق: {str(e)}', 'error')
+    
+    return redirect(url_for('admin_dashboard'))
+
+# صفحة الشروط والأحكام
+@app.route('/terms')
+def terms():
+    """صفحة الشروط والأحكام"""
+    return render_template('terms.html')
 
 @app.route('/payment/submit-transfer', methods=['POST'])
 @login_required
