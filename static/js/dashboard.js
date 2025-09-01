@@ -8,6 +8,10 @@ class TradingDashboard {
             { id: 'XAU/USD', name: 'الذهب', type: 'metal', source: 'twelve' },
             { id: 'EUR/USD', name: 'EUR/USD', type: 'forex', source: 'twelve' },
             { id: 'GBP/USD', name: 'GBP/USD', type: 'forex', source: 'twelve' },
+            { id: 'EUR/JPY', name: 'EUR/JPY', type: 'forex', source: 'twelve' },
+            { id: 'USD/JPY', name: 'USD/JPY', type: 'forex', source: 'twelve' },
+            { id: 'NZD/USD', name: 'NZD/USD', type: 'forex', source: 'twelve' },
+            { id: 'USD/CHF', name: 'USD/CHF', type: 'forex', source: 'twelve' },
         ];
         
         this.alertStates = JSON.parse(localStorage.getItem('alertStates') || '{}');
@@ -88,7 +92,7 @@ class TradingDashboard {
             if (priceElement) {
                 const price = prices[assetId].price;
                 priceElement.textContent = this.formatPrice(price, assetId);
-                priceElement.className = 'asset-price';
+                priceElement.className = 'price';
             }
         });
     }
@@ -119,20 +123,9 @@ class TradingDashboard {
         row.className = 'asset-row';
         row.setAttribute('data-asset-id', asset.id);
         
-        const info = document.createElement('div');
-        info.className = 'asset-info';
-        
         const name = document.createElement('div');
         name.className = 'asset-name';
-        name.textContent = asset.name;
-        
-        const price = document.createElement('div');
-        price.className = 'asset-price loading';
-        price.setAttribute('data-price-id', asset.id);
-        price.textContent = 'جاري التحميل...';
-        
-        info.appendChild(name);
-        info.appendChild(price);
+        name.innerHTML = `${asset.name} <span class="price" data-price-id="${asset.id}">--</span>`;
         
         const actions = document.createElement('div');
         actions.className = 'asset-actions';
@@ -146,16 +139,8 @@ class TradingDashboard {
             this.toggleAlert(asset.id, toggle);
         });
         
-        const editBtn = this.createButton('تعديل', () => this.openAlertModal(asset));
-        const viewBtn = this.createButton('عرض', () => this.viewAssetDetails(asset));
-        const deleteBtn = this.createButton('حذف', () => this.deleteAlert(asset.id));
-        
         actions.appendChild(toggle);
-        actions.appendChild(editBtn);
-        actions.appendChild(viewBtn);
-        actions.appendChild(deleteBtn);
-        
-        row.appendChild(info);
+        row.appendChild(name);
         row.appendChild(actions);
         
         return row;

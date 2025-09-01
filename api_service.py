@@ -17,6 +17,10 @@ class PriceService:
             {'id': 'XAU/USD', 'name': 'الذهب', 'type': 'metal', 'source': 'twelve'},
             {'id': 'EUR/USD', 'name': 'EUR/USD', 'type': 'forex', 'source': 'twelve'},
             {'id': 'GBP/USD', 'name': 'GBP/USD', 'type': 'forex', 'source': 'twelve'},
+            {'id': 'EUR/JPY', 'name': 'EUR/JPY', 'type': 'forex', 'source': 'twelve'},
+            {'id': 'USD/JPY', 'name': 'USD/JPY', 'type': 'forex', 'source': 'twelve'},
+            {'id': 'NZD/USD', 'name': 'NZD/USD', 'type': 'forex', 'source': 'twelve'},
+            {'id': 'USD/CHF', 'name': 'USD/CHF', 'type': 'forex', 'source': 'twelve'},
         ]
         
         # Store for price cache and alerts
@@ -29,7 +33,11 @@ class PriceService:
             'ETHUSDT': 3456.78,
             'XAU/USD': 2634.25,
             'EUR/USD': 1.0823,
-            'GBP/USD': 1.2678
+            'GBP/USD': 1.2678,
+            'EUR/JPY': 164.32,
+            'USD/JPY': 151.45,
+            'NZD/USD': 0.5823,
+            'USD/CHF': 0.8834
         }
         
     def get_binance_price(self, symbol: str) -> Optional[float]:

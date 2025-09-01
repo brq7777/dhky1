@@ -106,30 +106,19 @@ body {
     border-radius: 6px;
 }
 
-.asset-info {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
 .asset-name {
     font-weight: 600;
     font-size: 1rem;
     color: #fff;
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
-.asset-price {
-    font-size: 0.9rem;
-    color: #16a34a;
+.price {
+    font-size: 0.9em;
+    color: #93c5fd;
     font-weight: 500;
-}
-
-.asset-price.loading {
-    color: #6b7280;
-}
-
-.asset-price.error {
-    color: #dc2626;
 }
 
 .asset-actions {
@@ -194,7 +183,7 @@ body {
     text-align: center;
     color: #fff;
     font-size: 0.8rem;
-    margin-right: 8px;
+    margin-left: 8px;
 }
 
 .countdown.green {
