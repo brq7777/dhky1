@@ -33,19 +33,19 @@ class TradingDashboard {
     }
     
     initializeSocket() {
-        // Initialize with maximum compatibility settings
+        // Initialize with polling-only for maximum stability
         this.socket = io({
-            timeout: 20000,             // Extended timeout for stability
+            timeout: 30000,             // Very long timeout
             reconnection: true,         // Enable auto-reconnection
-            reconnectionDelay: 1000,    // Start reconnection after 1s
-            reconnectionAttempts: Infinity, // Never stop trying to reconnect
-            reconnectionDelayMax: 5000, // Max 5s delay between attempts
-            forceNew: false,            // Reuse existing connection
-            transports: ['polling', 'websocket'],  // Polling first for compatibility
-            upgrade: true,              // Allow upgrading to websocket
-            rememberUpgrade: false,     // Fresh connection each time
+            reconnectionDelay: 2000,    // Wait longer before reconnecting
+            reconnectionAttempts: Infinity, // Never stop trying
+            reconnectionDelayMax: 30000, // Very long max delay
+            forceNew: false,            // Reuse connection
+            transports: ['polling'],    // ONLY polling for maximum stability
+            upgrade: false,             // Never upgrade to websocket
+            rememberUpgrade: false,     // Always use polling
             forceBase64: false,         // Use binary if possible
-            enablesXDR: false           // Disable cross-domain for stability
+            timestampRequests: true     // Add timestamps to prevent caching
         });
         
         this.socket.on('connect', () => {

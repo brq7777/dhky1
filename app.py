@@ -33,15 +33,15 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for real-time updates with maximum compatibility
+# Initialize SocketIO for maximum stability - polling only
 socketio = SocketIO(app, 
                    cors_allowed_origins="*", 
-                   ping_timeout=30,        # Moderate timeout for stability
-                   ping_interval=10,       # Regular heartbeat
+                   ping_timeout=120,       # Very long timeout
+                   ping_interval=30,       # Less frequent pings
                    logger=False,           # Reduce logging overhead
                    engineio_logger=False,  # Reduce logging overhead
-                   async_mode='threading', # Use threading for better compatibility
-                   transports=['polling', 'websocket'])  # Ensure polling works first
+                   async_mode=None,        # Let SocketIO choose best mode
+                   transports=['polling']) # Use only polling for stability
 
 # Initialize price service
 price_service = PriceService()
