@@ -209,6 +209,19 @@ class TradingDashboard {
                 modal.style.display = 'none';
             }
         });
+        
+        // Add audio test button handler
+        const audioTestBtn = document.getElementById('audio-test-btn');
+        if (audioTestBtn) {
+            audioTestBtn.addEventListener('click', () => {
+                console.log('Audio test button clicked');
+                this.playAlertSound({ frequency: 1200, duration: 800 });
+                audioTestBtn.textContent = '✅ تم تشغيل الصوت';
+                setTimeout(() => {
+                    audioTestBtn.textContent = '🔊 اختبار الصوت';
+                }, 2000);
+            });
+        }
     }
     
     saveAlert() {
@@ -273,20 +286,55 @@ class TradingDashboard {
     }
     
     initializeAudio() {
-        // Initialize audio context on first user interaction
-        document.addEventListener('click', () => {
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
+        // Initialize audio context immediately
+        this.initAudioContext();
+        
+        // Add multiple event listeners to ensure audio context is enabled
+        ['click', 'touchstart', 'mousedown', 'keydown'].forEach(event => {
+            document.addEventListener(event, () => {
+                this.initAudioContext();
+            }, { once: true });
+        });
+    }
+    
+    initAudioContext() {
+        try {
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('Audio context created');
             }
-        }, { once: true });
+            
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume().then(() => {
+                    console.log('Audio context resumed successfully');
+                }).catch(err => {
+                    console.log('Error resuming audio context:', err);
+                });
+            }
+        } catch (error) {
+            console.log('Error with audio context:', error);
+            // Fallback: try simple beep with audio element
+            this.useFallbackAudio = true;
+        }
     }
     
     playAlertSound(options = {}) {
         const { frequency = 880, duration = 180 } = options;
         
+        console.log('Attempting to play alert sound:', { frequency, duration });
+        
+        // Ensure audio context is ready
+        this.initAudioContext();
+        
         try {
-            if (!this.audioContext) {
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (this.useFallbackAudio || !this.audioContext) {
+                this.playFallbackSound();
+                return;
             }
             
             if (this.audioContext.state === 'suspended') {
@@ -300,14 +348,32 @@ class TradingDashboard {
             oscillator.frequency.value = frequency;
             
             gainNode.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.2, this.audioContext.currentTime + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.3, this.audioContext.currentTime + 0.02);
             gainNode.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + duration / 1000);
             
             oscillator.connect(gainNode).connect(this.audioContext.destination);
             oscillator.start();
             oscillator.stop(this.audioContext.currentTime + duration / 1000);
+            
+            console.log('Alert sound played successfully');
         } catch (error) {
-            console.log('Audio context error:', error);
+            console.log('Audio context error, using fallback:', error);
+            this.playFallbackSound();
+        }
+    }
+    
+    playFallbackSound() {
+        // Create a short beep using data URI
+        try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEALQAAAFQBAAACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhASE=');
+            audio.volume = 0.3;
+            audio.play().then(() => {
+                console.log('Fallback sound played successfully');
+            }).catch(err => {
+                console.log('Fallback sound failed:', err);
+            });
+        } catch (error) {
+            console.log('All audio methods failed:', error);
         }
     }
     
@@ -409,6 +475,8 @@ class TradingDashboard {
         
         // Add test signal button handler
         document.getElementById('test-signal-btn').addEventListener('click', () => {
+            // Test audio immediately when button is clicked
+            this.playAlertSound({ frequency: 1000, duration: 500 });
             this.socket.emit('test_signal', { asset_id: 'BTCUSDT' });
         });
     }
