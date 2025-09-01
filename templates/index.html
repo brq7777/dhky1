@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الأصول</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>لوحة مراقبة الأصول المالية</h1>
+            <div class="status-indicator">
+                <span id="connection-status" class="status-dot offline"></span>
+                <span id="connection-text">غير متصل</span>
+            </div>
+        </header>
+
+        <div class="assets-sections">
+            <section class="card">
+                <h4>الأصول الرقمية والمعادن</h4>
+                <div id="crypto-metals"></div>
+            </section>
+            <section class="card">
+                <h4>الفوركس</h4>
+                <div id="forex"></div>
+            </section>
+        </div>
+
+        <!-- Alert Settings Modal -->
+        <div id="alert-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>إعدادات التنبيه</h3>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="alert-asset">الأصل:</label>
+                        <input type="text" id="alert-asset" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="alert-threshold">السعر المستهدف:</label>
+                        <input type="number" id="alert-threshold" step="0.01" placeholder="أدخل السعر">
+                    </div>
+                    <div class="form-group">
+                        <label for="alert-type">نوع التنبيه:</label>
+                        <select id="alert-type">
+                            <option value="above">عند الصعود أعلى من</option>
+                            <option value="below">عند الهبوط أقل من</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button id="save-alert" class="btn btn-primary">حفظ التنبيه</button>
+                        <button id="cancel-alert" class="btn btn-secondary">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
