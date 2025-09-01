@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>لوحة الأصول</title>
+<style>
+body { background: #0f0f0f; color: #e5e7eb; font-family: sans-serif; padding: 20px; }
+.assets-sections { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.card { background: #121212; border: 1px solid #2a2a2a; border-radius: 10px; padding: 12px; }
+h4 { margin: 0 0 8px; color: #e5e7eb; }
+.asset-row { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 8px 0; border-bottom: 1px dashed #2c2c2c; }
+.asset-row:last-child { border-bottom: 0; }
+.asset-name { font-weight: 600; }
+.asset-actions { display: flex; gap: 8px; align-items: center; }
+.toggle-btn { min-width: 90px; height: 36px; border-radius: 8px; border: 1px solid #333; color: #fff; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .2s; }
+.toggle-btn.on { background: #16a34a; }
+.toggle-btn.off { background: #0a0a0a; }
+.sec-btn { height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #333; background: #1f2937; color: #e5e7eb; cursor: pointer; }
+.sec-btn:hover { filter: brightness(1.1); }
+.countdown { font-weight: bold; padding: 4px 8px; border-radius: 6px; min-width: 50px; text-align: center; color: #fff; }
+.countdown.green { background: #16a34a; }
+.countdown.yellow { background: #eab308; }
+.countdown.red { background: #dc2626; }
+@keyframes flash { 0%, 100% { background-color: transparent; } 50% { background-color: rgba(255, 215, 0, 0.2); } }
+.flash { animation: flash 0.6s ease-in-out 3; }
+</style>
+</head>
+<body>
+
+<div class="assets-sections">
+  <section class="card">
+    <h4>الأصول الرقمية والمعادن</h4>
+    <div id="crypto-metals"></div>
+  </section>
+  <section class="card">
+    <h4>الفوركس</h4>
+    <div id="forex"></div>
+  </section>
+</div>
+
+<script>
+// مفاتيح API
+const TWELVE_KEY = "4589b5620aa8448faf709e192a1ae8f1";
+const BINANCE_KEY = "xJRK64Q88Ue5CbSFLZvA6NaxG6ealuBblT2BPjs0AHsBTjbO2FWXhmJA4vD9f6eZ";
+
+// قائمة الأصول
+const assets = [
+  { id: 'BTCUSDT', name: 'بيتكوين', type: 'crypto', source: 'binance' },
+  { id: 'ETHUSDT', name: 'إيثريوم', type: 'crypto', source: 'binance' },
+  { id: 'XAU/USD', name: 'الذهب',   type: 'metal',  source: 'twelve'  },
+  { id: 'EUR/USD', name: 'EUR/USD', type: 'forex',  source: 'twelve'  },
+  { id: 'GBP/USD', name: 'GBP/USD', type: 'forex',  source: 'twelve'  },
+];
+
+// حفظ حالة التنبيه
+const alertStates = JSON.parse(localStorage.getItem('alertStates') || '{}');
+function saveAlertStates() { localStorage.setItem('alertStates', JSON.stringify(alertStates)); }
+function isAlertOn(assetId) { return alertStates[assetId] === true; }
+
+// إنشاء صف الأصل
+function createAssetRow(asset) {
+  const row = document.createElement('div');
+  row.className = 'asset-row';
+
+  const name = document.createElement('div');
+  name.className = 'asset-name';
+  name.textContent = asset.name;
+
+  const actions = document.createElement('div');
+  actions.className = 'asset-actions';
+
+  const toggle = document.createElement('button');
+  toggle.className = 'toggle-btn ' + (isAlertOn(asset.id) ? 'on' : 'off');
+  toggle.setAttribute('data-id', asset.id);
+  toggle.textContent = isAlertOn(asset.id) ? 'شغال' : 'طافي';
+
+  toggle.addEventListener('click', () => {
+    const nowOn = !isAlertOn(asset.id);
+    alertStates[asset.id] = nowOn;
+    saveAlertStates();
+    toggle.classList.toggle('on', nowOn);
+    toggle.classList.toggle('off', !nowOn);
+    toggle.textContent = nowOn ? 'شغال' : 'طافي';
+  });
+
+  const view = btn('عرض'), edit = btn('تعديل'), del = btn('حذف');
+  actions.append(toggle, view, edit, del);
+  row.append(name, actions);
+  return row;
+}
+
+function btn(label) {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.className = 'sec-btn';
+  return b;
+}
+
+// عرض الأقسام
+function renderSections() {
+  const cryptoMetals = document.getElementById('crypto-metals');
+  const forex = document.getElementById('forex');
+  cryptoMetals.innerHTML = '';
+  forex.innerHTML = '';
+  assets.forEach(a => {
+    const host = (a.type === 'forex') ? forex : cryptoMetals;
+    host.appendChild(createAssetRow(a));
+  });
+}
+
+// صوت التنبيه
+let audioCtx;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playAlertSound({ freq = 880, durationMs = 180 } = {}) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + durationMs / 1000);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + durationMs / 1000);
+}
+
+// عد تنازلي دقيقة
+function startCountdown(assetId, seconds = 60) {
+  let remaining = seconds;
+  const btn = document.querySelector(`.toggle-btn[data-id="${assetId}"]`);
+  if (!btn) return;
+  let cd = btn.parentElement.querySelector('.countdown');
+  if (!cd) {
+    cd = document.createElement('div');
+    cd.className = 'countdown';
+    btn.parentElement.appendChild(cd);
+  }
+  const timer = setInterval(() => {
+    remaining--;
+    cd.textContent = remaining + 'ث';
+    if (remaining > seconds * 0.6) cd.className = 'countdown green';
+    else if (remaining > seconds * 0.3) cd.className = 'countdown yellow';
+    else cd.className = 'countdown red';
+    if (remaining <= 0) {
+      clearInterval(timer);
+      cd.textContent = 'انتهى';
+      setTimeout(() => cd.remove(), 2000);
+    }
+  }, 1000);
+  cd.textContent = seconds + 'ث';
+  cd.className = 'countdown green';
+}
+
+// وميض الصف
+function flashRow(assetId) {
+  const btn = document.querySelector(`.toggle-btn[data-id="${assetId}"]`);
+  if (!btn) return;
+  const row = btn.closest('.asset-row');
+  row.classList.add('flash');
+  setTimeout(() => row.classList.remove('flash'), 2000);
+}
+
+// عند صدور الصفقة
+function onAlertTriggered(assetId) {
+  if (!isAlertOn(assetId)) return;
+  playAlertSound();
+  flashRow(assetId);
+  startCountdown(assetId, 60);
+}
+
+// جلب
