@@ -3,9 +3,9 @@ class TradingDashboard {
     constructor() {
         this.socket = null;
         this.assets = [
-            { id: 'BTCUSDT', name: 'بيتكوين', type: 'crypto', source: 'binance' },
-            { id: 'ETHUSDT', name: 'إيثريوم', type: 'crypto', source: 'binance' },
-            { id: 'XAU/USD', name: 'الذهب', type: 'metal', source: 'twelve' },
+            { id: 'BTCUSDT', name: 'BTCUSD', type: 'crypto', source: 'binance' },
+            { id: 'ETHUSDT', name: 'ETHUSD', type: 'crypto', source: 'binance' },
+            { id: 'XAU/USD', name: 'XAUUSD', type: 'metal', source: 'twelve' },
             { id: 'EUR/USD', name: 'EUR/USD', type: 'forex', source: 'twelve' },
             { id: 'GBP/USD', name: 'GBP/USD', type: 'forex', source: 'twelve' },
             { id: 'EUR/JPY', name: 'EUR/JPY', type: 'forex', source: 'twelve' },
