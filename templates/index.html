@@ -12,8 +12,29 @@
         <header class="header">
             <h1>لوحة مراقبة الأصول المالية</h1>
             <div class="header-controls">
+                <div class="subscription-info">
+                    {% if subscription_status %}
+                        {% if subscription_status.is_trial and subscription_status.trial_remaining_hours > 0 %}
+                            <div class="trial-status">
+                                <span class="trial-label">🎉 تجربة مجانية</span>
+                                <span class="trial-time">{{ "%.1f"|format(subscription_status.trial_remaining_hours) }} ساعة متبقية</span>
+                                <a href="{{ url_for('subscription') }}" class="subscribe-link">اشترك الآن</a>
+                            </div>
+                        {% elif subscription_status.trial_remaining_hours <= 0 and not subscription_status.is_active %}
+                            <div class="trial-expired">
+                                <span class="expired-label">⏰ انتهت التجربة</span>
+                                <a href="{{ url_for('subscription') }}" class="subscribe-urgent">اشترك للمتابعة</a>
+                            </div>
+                        {% elif subscription_status.is_active %}
+                            <div class="active-subscription">
+                                <span class="subscription-label">✅ مشترك</span>
+                                <span class="subscription-date">حتى {{ subscription_status.end_date.strftime('%Y/%m/%d') if subscription_status.end_date else 'مستمر' }}</span>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
                 <div class="user-info">
-                    <span class="welcome-text">مرحباً، {{ user.email }}</span>
+                    <span class="welcome-text">مرحباً، {{ current_user.email }}</span>
                     <a href="{{ url_for('logout') }}" class="logout-btn">تسجيل الخروج</a>
                 </div>
                 <div class="status-indicator">

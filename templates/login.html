@@ -153,8 +153,12 @@
                 <button type="submit" class="submit-btn">تسجيل الدخول</button>
             </form>
             
-            <div class="auth-link" style="color: #888; font-size: 0.9rem;">
-                يرجى استخدام الإيميل وكلمة المرور المخصصين لك
+            <div class="auth-link">
+                <a href="{{ url_for('register_new_user') }}">🎉 تجربة مجانية 12 ساعة - ابدأ الآن!</a>
+            </div>
+            
+            <div class="auth-link" style="color: #888; font-size: 0.9rem; margin-top: 15px;">
+                أو استخدم الإيميل وكلمة المرور المخصصين لك للدخول المباشر
             </div>
         </div>
     </div>

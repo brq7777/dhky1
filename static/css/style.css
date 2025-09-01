@@ -4,6 +4,84 @@
     box-sizing: border-box;
 }
 
+/* معلومات الاشتراك في الهيدر */
+.subscription-info {
+    margin-left: 20px;
+}
+
+.trial-status {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    padding: 8px 15px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.trial-expired {
+    background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%);
+    padding: 8px 15px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+    animation: pulse 2s infinite;
+}
+
+.active-subscription {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    padding: 8px 15px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.trial-label, .expired-label, .subscription-label {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.trial-time, .subscription-date {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.subscribe-link, .subscribe-urgent {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    text-decoration: none;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.subscribe-urgent {
+    background: rgba(255,255,255,0.3);
+    animation: glow 1.5s infinite alternate;
+}
+
+.subscribe-link:hover, .subscribe-urgent:hover {
+    background: rgba(255,255,255,0.4);
+    transform: scale(1.05);
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+@keyframes glow {
+    from { box-shadow: 0 0 5px rgba(255,255,255,0.3); }
+    to { box-shadow: 0 0 15px rgba(255,255,255,0.6); }
+}
+
 body {
     background: #0f0f0f;
     color: #e5e7eb;
