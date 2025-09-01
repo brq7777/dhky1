@@ -86,14 +86,13 @@ def handle_test_signal(data):
     emit('trading_signal', test_signal)
     logging.info(f"Test signal sent: {test_signal}")
 
-@socketio.on('subscribe_alerts')
-def handle_subscribe_alerts(data):
-    """Handle alert subscription"""
+@socketio.on('subscribe_alert')
+def handle_subscribe_alert(data):
+    """Handle general alert subscription"""
     asset_id = data.get('asset_id')
-    threshold = data.get('threshold')
-    alert_type = data.get('type', 'above')  # 'above' or 'below'
+    alert_type = data.get('type', 'general')  # 'general' for all price movements
     
-    logging.info(f"Alert subscription: {asset_id}, {threshold}, {alert_type}")
+    logging.info(f"General alert subscription: {asset_id}, {alert_type}")
     
     # Store alert in price service  
     try:
@@ -101,11 +100,10 @@ def handle_subscribe_alerts(data):
         client_id = session.get('client_id', 'default')
     except:
         client_id = 'default'
-    price_service.add_alert(asset_id, threshold, alert_type, client_id)
+    price_service.add_alert(asset_id, None, alert_type, client_id)  # No threshold needed
     
     emit('alert_subscribed', {
         'asset_id': asset_id,
-        'threshold': threshold,
         'type': alert_type
     })
 

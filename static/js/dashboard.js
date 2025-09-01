@@ -308,39 +308,21 @@ class TradingDashboard {
     saveAlert() {
         if (!this.currentAlertAsset) return;
         
-        const threshold = parseFloat(document.getElementById('alert-threshold').value);
-        const alertType = document.getElementById('alert-type').value;
-        
-        if (isNaN(threshold) || threshold <= 0) {
-            alert('يرجى إدخال سعر صحيح');
-            return;
-        }
-        
-        // Subscribe to alert via socket
-        this.socket.emit('subscribe_alerts', {
-            asset_id: this.currentAlertAsset.id,
-            threshold: threshold,
-            type: alertType
-        });
-        
-        // Enable alert locally
+        // تفعيل التنبيه العام بدون شروط
         this.alertStates[this.currentAlertAsset.id] = true;
         this.saveAlertStates();
         
-        // Update button
-        const button = document.querySelector(`[data-id="${this.currentAlertAsset.id}"]`);
-        if (button) {
-            button.classList.add('on');
-            button.classList.remove('off');
-            button.textContent = 'شغال';
+        // إرسال إشعار للخادم
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('subscribe_alert', {
+                asset_id: this.currentAlertAsset.id,
+                type: 'general' // تنبيه عام
+            });
         }
         
-        // Close modal
+        // إغلاق المودال وتحديث الأزرار
         document.getElementById('alert-modal').style.display = 'none';
-        
-        // Clear form
-        document.getElementById('alert-threshold').value = '';
-        document.getElementById('alert-type').value = 'above';
+        this.renderSections(); // إعادة رسم الأزرار لتحديث الحالة
     }
     
     viewAssetDetails(asset) {
@@ -520,7 +502,7 @@ class TradingDashboard {
     }
     
     showNotification(alert) {
-        const message = `تنبيه: ${alert.asset_name}\nالسعر الحالي: ${this.formatPrice(alert.current_price, alert.asset_id)}\nالسعر المستهدف: ${alert.threshold}`;
+        const message = `تنبيه: ${alert.asset_name}\nالسعر الحالي: ${this.formatPrice(alert.current_price, alert.asset_id)}`;
         
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('تنبيه سعر', {

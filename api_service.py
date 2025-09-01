@@ -152,7 +152,7 @@ class PriceService:
         
         return prices
     
-    def add_alert(self, asset_id: str, threshold: float, alert_type: str, client_id: str):
+    def add_alert(self, asset_id: str, threshold: Optional[float] = None, alert_type: str = 'general', client_id: str = 'default'):
         """Add a price alert"""
         if asset_id not in self.alerts:
             self.alerts[asset_id] = []
@@ -181,9 +181,19 @@ class PriceService:
             for i, alert in enumerate(self.alerts[asset_id]):
                 triggered = False
                 
-                if alert['type'] == 'above' and current_price >= alert['threshold']:
+                # For general alerts, trigger on any significant price movement
+                if alert['type'] == 'general':
+                    # Check if price changed significantly (more than 0.5%)
+                    if asset_id in self.price_cache:
+                        prev_price = self.price_cache[asset_id]['price']
+                        price_change_percent = abs((current_price - prev_price) / prev_price) * 100
+                        if price_change_percent > 0.5:  # 0.5% change threshold
+                            triggered = True
+                    else:
+                        triggered = True  # First time, always trigger
+                elif alert['type'] == 'above' and alert['threshold'] and current_price >= alert['threshold']:
                     triggered = True
-                elif alert['type'] == 'below' and current_price <= alert['threshold']:
+                elif alert['type'] == 'below' and alert['threshold'] and current_price <= alert['threshold']:
                     triggered = True
                 
                 if triggered:
@@ -191,14 +201,17 @@ class PriceService:
                         'asset_id': asset_id,
                         'asset_name': price_data['name'],
                         'current_price': current_price,
-                        'threshold': alert['threshold'],
+                        'threshold': alert.get('threshold'),
                         'type': alert['type'],
                         'client_id': alert['client_id']
                     }
                     triggered_alerts.append(triggered_alert)
-                    alerts_to_remove.append(i)
+                    
+                    # Only remove specific threshold alerts, keep general alerts active
+                    if alert['type'] != 'general':
+                        alerts_to_remove.append(i)
             
-            # Remove triggered alerts
+            # Remove triggered threshold-based alerts
             for i in reversed(alerts_to_remove):
                 del self.alerts[asset_id][i]
         
