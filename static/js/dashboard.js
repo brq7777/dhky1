@@ -391,49 +391,33 @@ class TradingDashboard {
         
         console.log('Attempting to play alert sound:', { frequency, duration });
         
-        // Ensure audio context is ready
-        this.initAudioContext();
-        
         try {
-            if (this.useFallbackAudio || !this.audioContext) {
+            // Use the uploaded MP3 file for all alerts
+            const audio = new Audio('/static/sounds/alert.mp3');
+            audio.volume = 0.8;
+            audio.currentTime = 0; // Reset to beginning
+            
+            audio.play().then(() => {
+                console.log('Alert sound played successfully');
+            }).catch(err => {
+                console.log('MP3 alert sound failed, using fallback:', err);
                 this.playFallbackSound();
-                return;
-            }
-            
-            if (this.audioContext.state === 'suspended') {
-                this.audioContext.resume();
-            }
-            
-            const oscillator = this.audioContext.createOscillator();
-            const gainNode = this.audioContext.createGain();
-            
-            oscillator.type = 'sine';
-            oscillator.frequency.value = frequency;
-            
-            gainNode.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.3, this.audioContext.currentTime + 0.02);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + duration / 1000);
-            
-            oscillator.connect(gainNode).connect(this.audioContext.destination);
-            oscillator.start();
-            oscillator.stop(this.audioContext.currentTime + duration / 1000);
-            
-            console.log('Alert sound played successfully');
+            });
         } catch (error) {
-            console.log('Audio context error, using fallback:', error);
+            console.log('MP3 audio error, using fallback:', error);
             this.playFallbackSound();
         }
     }
     
     playFallbackSound() {
-        // Create a short beep using data URI
+        // Fallback: try simple beep with data URI
         try {
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEALQAAAFQBAAACABAAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhASE=');
-            audio.volume = 0.3;
+            audio.volume = 0.5;
             audio.play().then(() => {
                 console.log('Fallback sound played successfully');
             }).catch(err => {
-                console.log('Fallback sound failed:', err);
+                console.log('All audio methods failed:', err);
             });
         } catch (error) {
             console.log('All audio methods failed:', error);
