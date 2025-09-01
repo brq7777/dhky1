@@ -33,15 +33,15 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for real-time updates with ultra-stable settings
+# Initialize SocketIO for real-time updates with maximum compatibility
 socketio = SocketIO(app, 
                    cors_allowed_origins="*", 
-                   ping_timeout=60,        # Much longer timeout for stability
-                   ping_interval=25,       # Less frequent but more stable heartbeat
+                   ping_timeout=30,        # Moderate timeout for stability
+                   ping_interval=10,       # Regular heartbeat
                    logger=False,           # Reduce logging overhead
                    engineio_logger=False,  # Reduce logging overhead
-                   always_connect=True,    # Force connection persistence
-                   async_mode='gevent')    # Use gevent for better stability
+                   async_mode='threading', # Use threading for better compatibility
+                   transports=['polling', 'websocket'])  # Ensure polling works first
 
 # Initialize price service
 price_service = PriceService()
@@ -283,6 +283,16 @@ def handle_connect():
 def handle_disconnect():
     """Handle client disconnection"""
     logging.info('Client disconnected')
+
+@socketio.on('test_connection')
+def handle_test_connection(data):
+    """Handle connection test from client"""
+    logging.info(f"Connection test received from client")
+    emit('connection_confirmed', {
+        'status': 'connected',
+        'timestamp': data.get('timestamp'),
+        'server_time': time.time()
+    })
 
 @socketio.on('test_signal')
 def handle_test_signal(data):

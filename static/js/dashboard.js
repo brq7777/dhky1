@@ -33,24 +33,28 @@ class TradingDashboard {
     }
     
     initializeSocket() {
-        // Initialize with ultra-stable settings for persistent connection
+        // Initialize with maximum compatibility settings
         this.socket = io({
-            timeout: 10000,             // Longer connection timeout for stability
+            timeout: 20000,             // Extended timeout for stability
             reconnection: true,         // Enable auto-reconnection
-            reconnectionDelay: 2000,    // Wait 2s before first reconnection attempt
+            reconnectionDelay: 1000,    // Start reconnection after 1s
             reconnectionAttempts: Infinity, // Never stop trying to reconnect
-            reconnectionDelayMax: 10000, // Max 10s delay between attempts
+            reconnectionDelayMax: 5000, // Max 5s delay between attempts
             forceNew: false,            // Reuse existing connection
-            transports: ['polling', 'websocket'],  // Use polling first (more stable)
+            transports: ['polling', 'websocket'],  // Polling first for compatibility
             upgrade: true,              // Allow upgrading to websocket
-            rememberUpgrade: false,     // Don't remember websocket upgrade
-            closeOnBeforeunload: false  // Keep connection alive during page changes
+            rememberUpgrade: false,     // Fresh connection each time
+            forceBase64: false,         // Use binary if possible
+            enablesXDR: false           // Disable cross-domain for stability
         });
         
         this.socket.on('connect', () => {
-            console.log('Connected to server');
+            console.log('Connected to server successfully');
             this.updateConnectionStatus(true);
             this.resetReconnectionAttempts();
+            
+            // Send a test message to confirm connection
+            this.socket.emit('test_connection', {timestamp: Date.now()});
         });
         
         this.socket.on('disconnect', (reason) => {
@@ -97,6 +101,11 @@ class TradingDashboard {
         
         this.socket.on('system_status', (status) => {
             this.updateSystemStatus(status);
+        });
+        
+        this.socket.on('connection_confirmed', (data) => {
+            console.log('Connection confirmed by server:', data);
+            this.updateConnectionStatus(true);
         });
     }
     
