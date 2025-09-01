@@ -71,7 +71,7 @@ def handle_disconnect():
 def handle_test_signal(data):
     """Generate a test trading signal"""
     asset_id = data.get('asset_id', 'BTCUSDT')
-    asset_name = next((a['name'] for a in price_service.assets if a['id'] == asset_id), 'بيتكوين')
+    asset_name = next((a['name'] for a in price_service.assets if a['id'] == asset_id), 'BTCUSD')
     
     test_signal = {
         'asset_id': asset_id,

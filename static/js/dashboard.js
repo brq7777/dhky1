@@ -397,12 +397,14 @@ class TradingDashboard {
             audio.volume = 0.8;
             audio.currentTime = 0; // Reset to beginning
             
+            // Try to play immediately
             audio.play().then(() => {
                 console.log('Alert sound played successfully');
             }).catch(err => {
                 console.log('MP3 alert sound failed, using fallback:', err);
                 this.playFallbackSound();
             });
+            
         } catch (error) {
             console.log('MP3 audio error, using fallback:', error);
             this.playFallbackSound();
