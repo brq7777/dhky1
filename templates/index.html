@@ -13,7 +13,7 @@
             <h1>لوحة مراقبة الأصول المالية</h1>
             <div class="header-controls">
                 <div class="user-info">
-                    <span class="welcome-text">مرحباً، {{ user.username }}</span>
+                    <span class="welcome-text">مرحباً، {{ user.email }}</span>
                     <a href="{{ url_for('logout') }}" class="logout-btn">تسجيل الخروج</a>
                 </div>
                 <div class="status-indicator">

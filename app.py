@@ -38,9 +38,28 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Initialize price service
 price_service = PriceService()
 
-# إنشاء جداول قاعدة البيانات
+# إنشاء جداول قاعدة البيانات وإنشاء المستخدم الافتراضي
 with app.app_context():
+    # حذف الجداول القديمة وإعادة إنشائها لتحديث البنية
+    db.drop_all()
     db.create_all()
+    
+    # إنشاء المستخدم الافتراضي
+    admin_email = "abodhayym2020@gmail.com"
+    admin_password = "Msken2009"
+    
+    admin_user = User()
+    admin_user.email = admin_email
+    admin_user.username = "Admin"
+    admin_user.set_password(admin_password)
+    
+    try:
+        db.session.add(admin_user)
+        db.session.commit()
+        logging.info(f"تم إنشاء المستخدم الافتراضي: {admin_email}")
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"خطأ في إنشاء المستخدم الافتراضي: {e}")
 
 @app.route('/')
 @login_required
@@ -88,14 +107,14 @@ def login():
     from flask_login import login_user
     
     if request.method == 'POST':
-        username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
         
-        if not username or not password:
-            flash('يرجى إدخال اسم المستخدم وكلمة المرور', 'error')
+        if not email or not password:
+            flash('يرجى إدخال الإيميل وكلمة المرور', 'error')
             return render_template('login.html')
         
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(email=email).first()
         
         if user and user.check_password(password):
             login_user(user)
@@ -104,54 +123,15 @@ def login():
                 return redirect(next_page)
             return redirect(url_for('index'))
         else:
-            flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'error')
+            flash('الإيميل أو كلمة المرور غير صحيحة', 'error')
     
     return render_template('login.html')
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/register')
 def register():
-    """صفحة التسجيل"""
-    from flask_login import login_user
-    
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-        
-        if not username or not password or not confirm_password:
-            flash('يرجى ملء جميع الحقول', 'error')
-            return render_template('register.html')
-        
-        if password != confirm_password:
-            flash('كلمات المرور غير متطابقة', 'error')
-            return render_template('register.html')
-        
-        if len(password) < 6:
-            flash('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error')
-            return render_template('register.html')
-        
-        # التحقق من عدم وجود مستخدم بنفس الاسم
-        if User.query.filter_by(username=username).first():
-            flash('اسم المستخدم موجود بالفعل', 'error')
-            return render_template('register.html')
-        
-        # إنشاء مستخدم جديد
-        new_user = User()
-        new_user.username = username
-        new_user.set_password(password)
-        
-        try:
-            db.session.add(new_user)
-            db.session.commit()
-            login_user(new_user)
-            flash('تم إنشاء الحساب بنجاح', 'success')
-            return redirect(url_for('index'))
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error creating user: {e}")
-            flash('حدث خطأ أثناء إنشاء الحساب', 'error')
-    
-    return render_template('register.html')
+    """صفحة التسجيل - معطلة"""
+    flash('التسجيل غير متاح. يرجى استخدام الإيميل المخصص لك.', 'info')
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 @login_required
