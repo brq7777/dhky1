@@ -1,7 +1,8 @@
 import os
 import logging
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
 from flask_socketio import SocketIO, emit
+from flask_login import LoginManager, login_required, logout_user, current_user
 import threading
 import time
 from api_service import PriceService
@@ -12,16 +13,40 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
+# إعداد قاعدة البيانات
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# إستيراد نموذج المستخدم وإعداد قاعدة البيانات
+from models import db, User
+db.init_app(app)
+
+# إعداد Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'يرجى تسجيل الدخول للوصول إلى هذه الصفحة.'
+login_manager.login_message_category = 'info'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 # Initialize SocketIO for real-time updates
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize price service
 price_service = PriceService()
 
+# إنشاء جداول قاعدة البيانات
+with app.app_context():
+    db.create_all()
+
 @app.route('/')
+@login_required
 def index():
-    """Serve the main dashboard page"""
-    return render_template('index.html')
+    """الصفحة الرئيسية للوحة التحكم - تتطلب تسجيل الدخول"""
+    return render_template('index.html', user=current_user)
 
 @app.route('/api/prices')
 def get_prices():
@@ -55,6 +80,86 @@ def get_system_status():
     except Exception as e:
         logging.error(f"Error fetching system status: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# مسارات المصادقة
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """صفحة تسجيل الدخول"""
+    from flask_login import login_user
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            flash('يرجى إدخال اسم المستخدم وكلمة المرور', 'error')
+            return render_template('login.html')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('index'))
+        else:
+            flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """صفحة التسجيل"""
+    from flask_login import login_user
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not username or not password or not confirm_password:
+            flash('يرجى ملء جميع الحقول', 'error')
+            return render_template('register.html')
+        
+        if password != confirm_password:
+            flash('كلمات المرور غير متطابقة', 'error')
+            return render_template('register.html')
+        
+        if len(password) < 6:
+            flash('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error')
+            return render_template('register.html')
+        
+        # التحقق من عدم وجود مستخدم بنفس الاسم
+        if User.query.filter_by(username=username).first():
+            flash('اسم المستخدم موجود بالفعل', 'error')
+            return render_template('register.html')
+        
+        # إنشاء مستخدم جديد
+        new_user = User()
+        new_user.username = username
+        new_user.set_password(password)
+        
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            login_user(new_user)
+            flash('تم إنشاء الحساب بنجاح', 'success')
+            return redirect(url_for('index'))
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Error creating user: {e}")
+            flash('حدث خطأ أثناء إنشاء الحساب', 'error')
+    
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """تسجيل الخروج"""
+    logout_user()
+    flash('تم تسجيل الخروج بنجاح', 'info')
+    return redirect(url_for('login'))
 
 @socketio.on('connect')
 def handle_connect():
