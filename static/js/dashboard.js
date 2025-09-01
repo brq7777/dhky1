@@ -33,16 +33,18 @@ class TradingDashboard {
     }
     
     initializeSocket() {
-        // Initialize with optimized settings for fast reconnection
+        // Initialize with ultra-stable settings for persistent connection
         this.socket = io({
-            timeout: 5000,              // Faster connection timeout
+            timeout: 10000,             // Longer connection timeout for stability
             reconnection: true,         // Enable auto-reconnection
-            reconnectionDelay: 1000,    // Start reconnection attempts after 1s
-            reconnectionAttempts: 50,   // Try many times to reconnect
-            maxReconnectionAttempts: 50,
-            reconnectionDelayMax: 5000, // Max delay between attempts
+            reconnectionDelay: 2000,    // Wait 2s before first reconnection attempt
+            reconnectionAttempts: Infinity, // Never stop trying to reconnect
+            reconnectionDelayMax: 10000, // Max 10s delay between attempts
             forceNew: false,            // Reuse existing connection
-            transports: ['websocket', 'polling']  // Try websocket first, fallback to polling
+            transports: ['polling', 'websocket'],  // Use polling first (more stable)
+            upgrade: true,              // Allow upgrading to websocket
+            rememberUpgrade: false,     // Don't remember websocket upgrade
+            closeOnBeforeunload: false  // Keep connection alive during page changes
         });
         
         this.socket.on('connect', () => {
@@ -597,8 +599,13 @@ class TradingDashboard {
         // Add to signals list
         this.addSignalToList(signal);
         
-        // Show notification
-        const message = `🚨 إشارة ${signal.type}\n${signal.asset_name}\nالسعر: ${this.formatPrice(signal.price, signal.asset_id)}\nالثقة: ${signal.confidence}%\n${signal.reason}`;
+        // Enhanced notification with technical indicators
+        let technicalDetails = '';
+        if (signal.rsi) {
+            technicalDetails = `\nRSI: ${signal.rsi} | SMA5: ${signal.sma_short} | تغير: ${signal.price_change_5}%`;
+        }
+        
+        const message = `🚨 إشارة ${signal.type}\n${signal.asset_name}\nالسعر: ${this.formatPrice(signal.price, signal.asset_id)}\nالثقة: ${signal.confidence}%\n${signal.reason}${technicalDetails}`;
         
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(`إشارة ${signal.type} - ${signal.asset_name}`, {

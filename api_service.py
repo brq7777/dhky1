@@ -38,6 +38,10 @@ class PriceService:
         self.last_signal_time = {}
         self.last_alert_check = {}  # Optimize alert checking
         
+        # Technical analysis data storage
+        self.price_history = {}  # Store historical prices for analysis
+        self.technical_indicators = {}  # Store calculated indicators
+        
         # Demo data fallback for when APIs fail - more realistic starting prices
         self.demo_prices = {
             'BTCUSDT': 65234.50,
@@ -331,45 +335,174 @@ class PriceService:
         return signals
     
     def generate_trading_signals_fast(self, current_prices: Dict[str, Dict]) -> List[Dict]:
-        """Optimized signal generation - higher frequency for better responsiveness"""
+        """Generate real technical analysis signals based on indicators"""
         signals = []
         current_time = time.time()
         
         for asset_id, price_data in current_prices.items():
-            # Faster signal generation (15-25 seconds instead of 30-60)
+            # Update price history for technical analysis
+            self._update_price_history(asset_id, price_data['price'], current_time)
+            
+            # Only generate signals every 20-30 seconds per asset
             if asset_id in self.last_signal_time:
                 time_since_last = current_time - self.last_signal_time[asset_id]
-                if time_since_last < 15:  # Minimum 15 seconds
+                if time_since_last < 20:  # Minimum 20 seconds between signals
                     continue
             
-            # Higher chance of signal generation (20% instead of 15%)
-            if random.random() < 0.20:
-                signal_type = random.choice(['BUY', 'SELL'])
-                confidence = random.randint(70, 95)
-                
-                signal = {
-                    'asset_id': asset_id,
-                    'asset_name': price_data['name'],
-                    'type': signal_type,
-                    'price': price_data['price'],
-                    'confidence': confidence,
-                    'timestamp': current_time,
-                    'reason': self._get_signal_reason(signal_type)
-                }
-                
+            # Calculate technical indicators and generate signals
+            signal = self._analyze_technical_indicators(asset_id, price_data, current_time)
+            
+            if signal:
                 signals.append(signal)
                 self.last_signal_time[asset_id] = current_time
                 
-                # Store in history (reduced history size for performance)
+                # Store in history
                 if asset_id not in self.signals_history:
                     self.signals_history[asset_id] = []
                 self.signals_history[asset_id].append(signal)
                 
-                # Keep only last 5 signals per asset for faster processing
+                # Keep only last 5 signals per asset for performance
                 if len(self.signals_history[asset_id]) > 5:
                     self.signals_history[asset_id] = self.signals_history[asset_id][-5:]
         
         return signals
+    
+    def _update_price_history(self, asset_id: str, price: float, timestamp: float):
+        """Update price history for technical analysis"""
+        if asset_id not in self.price_history:
+            self.price_history[asset_id] = []
+        
+        self.price_history[asset_id].append({
+            'price': price,
+            'timestamp': timestamp
+        })
+        
+        # Keep only last 50 price points for analysis
+        if len(self.price_history[asset_id]) > 50:
+            self.price_history[asset_id] = self.price_history[asset_id][-50:]
+    
+    def _calculate_rsi(self, prices: List[float], period: int = 14) -> float:
+        """Calculate Relative Strength Index"""
+        if len(prices) < period + 1:
+            return 50.0  # Neutral RSI
+        
+        gains = []
+        losses = []
+        
+        for i in range(1, len(prices)):
+            change = prices[i] - prices[i-1]
+            if change > 0:
+                gains.append(change)
+                losses.append(0)
+            else:
+                gains.append(0)
+                losses.append(abs(change))
+        
+        if len(gains) < period:
+            return 50.0
+        
+        avg_gain = sum(gains[-period:]) / period
+        avg_loss = sum(losses[-period:]) / period
+        
+        if avg_loss == 0:
+            return 100.0
+        
+        rs = avg_gain / avg_loss
+        rsi = 100 - (100 / (1 + rs))
+        return rsi
+    
+    def _calculate_moving_average(self, prices: List[float], period: int) -> float:
+        """Calculate Simple Moving Average"""
+        if len(prices) < period:
+            return prices[-1] if prices else 0
+        
+        return sum(prices[-period:]) / period
+    
+    def _calculate_price_change_percent(self, prices: List[float], period: int = 5) -> float:
+        """Calculate price change percentage over a period"""
+        if len(prices) < period:
+            return 0.0
+        
+        old_price = prices[-period]
+        current_price = prices[-1]
+        
+        if old_price == 0:
+            return 0.0
+        
+        return ((current_price - old_price) / old_price) * 100
+    
+    def _analyze_technical_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Dict:
+        """Analyze technical indicators and generate trading signal"""
+        if asset_id not in self.price_history or len(self.price_history[asset_id]) < 10:
+            return None  # Need more data for analysis
+        
+        prices = [p['price'] for p in self.price_history[asset_id]]
+        current_price = price_data['price']
+        
+        # Calculate technical indicators
+        rsi = self._calculate_rsi(prices)
+        sma_short = self._calculate_moving_average(prices, 5)   # 5-period SMA
+        sma_long = self._calculate_moving_average(prices, 15)   # 15-period SMA
+        price_change_5 = self._calculate_price_change_percent(prices, 5)
+        
+        # Signal generation logic based on technical analysis
+        signal_strength = 0
+        signal_type = None
+        reasons = []
+        
+        # RSI Analysis
+        if rsi < 30:  # Oversold
+            signal_strength += 30
+            signal_type = 'BUY'
+            reasons.append('RSI oversold')
+        elif rsi > 70:  # Overbought
+            signal_strength += 30
+            signal_type = 'SELL'
+            reasons.append('RSI overbought')
+        
+        # Moving Average Crossover
+        if sma_short > sma_long and current_price > sma_short:
+            signal_strength += 25
+            if signal_type != 'SELL':
+                signal_type = 'BUY'
+                reasons.append('Price above MA')
+        elif sma_short < sma_long and current_price < sma_short:
+            signal_strength += 25
+            if signal_type != 'BUY':
+                signal_type = 'SELL'
+                reasons.append('Price below MA')
+        
+        # Price momentum
+        if abs(price_change_5) > 1.0:  # Strong momentum
+            signal_strength += 20
+            if price_change_5 > 0:
+                if signal_type != 'SELL':
+                    signal_type = 'BUY'
+                    reasons.append('Strong upward momentum')
+            else:
+                if signal_type != 'BUY':
+                    signal_type = 'SELL'
+                    reasons.append('Strong downward momentum')
+        
+        # Only generate signal if strength is sufficient
+        if signal_strength >= 40 and signal_type:
+            confidence = min(signal_strength + 30, 95)  # Convert strength to confidence
+            
+            return {
+                'asset_id': asset_id,
+                'asset_name': price_data['name'],
+                'type': signal_type,
+                'price': current_price,
+                'confidence': confidence,
+                'timestamp': current_time,
+                'reason': ', '.join(reasons),
+                'rsi': round(rsi, 1),
+                'sma_short': round(sma_short, 2),
+                'sma_long': round(sma_long, 2),
+                'price_change_5': round(price_change_5, 2)
+            }
+        
+        return None
     
     def _get_signal_reason(self, signal_type: str) -> str:
         """Get a reason for the trading signal"""
