@@ -363,6 +363,18 @@ body {
         margin: 5% auto;
         width: 95%;
     }
+    
+    .signal-details {
+        grid-template-columns: 1fr;
+        gap: 5px;
+        text-align: center;
+    }
+    
+    .signal-header {
+        flex-direction: column;
+        gap: 5px;
+        text-align: center;
+    }
 }
 
 /* Loading Animation */
@@ -380,4 +392,170 @@ body {
     animation: spin 1s linear infinite;
     display: inline-block;
     margin-left: 8px;
+}
+
+/* Signals Panel Styles */
+.signals-panel {
+    margin-bottom: 30px;
+}
+
+.signals-card {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+    border: 2px solid #4a90e2;
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(74, 144, 226, 0.2);
+    overflow: hidden;
+}
+
+.signals-card h4 {
+    text-align: center;
+    color: #4a90e2;
+    font-size: 1.4em;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(74, 144, 226, 0.1);
+    border-bottom: 1px solid rgba(74, 144, 226, 0.2);
+    border-radius: 15px 15px 0 0;
+    margin: -20px -20px 20px -20px;
+}
+
+#signals-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+.signal-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.signal-item.buy {
+    border-left-color: #27AE60;
+    background: rgba(39, 174, 96, 0.1);
+}
+
+.signal-item.sell {
+    border-left-color: #E74C3C;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.signal-item.flash {
+    animation: signalFlash 2s ease-in-out;
+}
+
+@keyframes signalFlash {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.02); opacity: 0.9; }
+}
+
+.signal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.signal-type {
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.9em;
+    color: white;
+}
+
+.signal-type.buy {
+    background: #27AE60;
+}
+
+.signal-type.sell {
+    background: #E74C3C;
+}
+
+.signal-asset {
+    font-weight: bold;
+    color: #fff;
+    font-size: 1.1em;
+}
+
+.signal-confidence {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.9em;
+    color: #4a90e2;
+}
+
+.signal-details {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 10px;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.signal-price {
+    font-weight: bold;
+    color: #f39c12;
+}
+
+.signal-reason {
+    color: #bdc3c7;
+    text-align: center;
+}
+
+.signal-time {
+    color: #95a5a6;
+    text-align: left;
+    font-size: 0.8em;
+}
+
+.signal-countdown {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.signal-countdown.green {
+    background: rgba(39, 174, 96, 0.8);
+    color: white;
+}
+
+.signal-countdown.yellow {
+    background: rgba(243, 156, 18, 0.8);
+    color: white;
+}
+
+.signal-countdown.red {
+    background: rgba(231, 76, 60, 0.8);
+    color: white;
+}
+
+.test-btn {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.test-btn:hover {
+    background: linear-gradient(135deg, #8e44ad, #7d3c98);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(158, 89, 182, 0.4);
 }

@@ -28,6 +28,7 @@ class TradingDashboard {
         this.initializeAudio();
         this.setupModalHandlers();
         this.fetchInitialPrices();
+        this.addSignalsPanel();
     }
     
     initializeSocket() {
@@ -53,6 +54,10 @@ class TradingDashboard {
         
         this.socket.on('alert_subscribed', (data) => {
             console.log('Alert subscribed:', data);
+        });
+        
+        this.socket.on('trading_signal', (signal) => {
+            this.handleTradingSignal(signal);
         });
     }
     
@@ -279,23 +284,31 @@ class TradingDashboard {
     playAlertSound(options = {}) {
         const { frequency = 880, duration = 180 } = options;
         
-        if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+            
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = frequency;
+            
+            gainNode.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.2, this.audioContext.currentTime + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + duration / 1000);
+            
+            oscillator.connect(gainNode).connect(this.audioContext.destination);
+            oscillator.start();
+            oscillator.stop(this.audioContext.currentTime + duration / 1000);
+        } catch (error) {
+            console.log('Audio context error:', error);
         }
-        
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.value = frequency;
-        
-        gainNode.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.2, this.audioContext.currentTime + 0.02);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + duration / 1000);
-        
-        oscillator.connect(gainNode).connect(this.audioContext.destination);
-        oscillator.start();
-        oscillator.stop(this.audioContext.currentTime + duration / 1000);
     }
     
     handleAlertTriggered(alert) {
@@ -379,6 +392,122 @@ class TradingDashboard {
         } else {
             alert(message);
         }
+    }
+    
+    addSignalsPanel() {
+        const container = document.querySelector('.container');
+        const signalsPanel = document.createElement('div');
+        signalsPanel.className = 'signals-panel';
+        signalsPanel.innerHTML = `
+            <div class="card signals-card">
+                <h4>🔔 إشارات الصفقات المباشرة</h4>
+                <div id="signals-list">لا توجد إشارات حتى الآن...</div>
+                <button id="test-signal-btn" class="test-btn">اختبار إشارة</button>
+            </div>
+        `;
+        container.insertBefore(signalsPanel, container.firstChild);
+        
+        // Add test signal button handler
+        document.getElementById('test-signal-btn').addEventListener('click', () => {
+            this.socket.emit('test_signal', { asset_id: 'BTCUSDT' });
+        });
+    }
+    
+    handleTradingSignal(signal) {
+        console.log('Trading signal received:', signal);
+        
+        // Play sound for signal
+        this.playAlertSound({ frequency: signal.type === 'BUY' ? 1000 : 600, duration: 300 });
+        
+        // Add to signals list
+        this.addSignalToList(signal);
+        
+        // Show notification
+        const message = `🚨 إشارة ${signal.type}\n${signal.asset_name}\nالسعر: ${this.formatPrice(signal.price, signal.asset_id)}\nالثقة: ${signal.confidence}%\n${signal.reason}`;
+        
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(`إشارة ${signal.type} - ${signal.asset_name}`, {
+                body: message,
+                icon: '/static/favicon.ico'
+            });
+        }
+        
+        // Start countdown for signal
+        this.startSignalCountdown(signal.asset_id, 60);
+    }
+    
+    addSignalToList(signal) {
+        const signalsList = document.getElementById('signals-list');
+        
+        // Create signal element
+        const signalElement = document.createElement('div');
+        signalElement.className = `signal-item ${signal.type.toLowerCase()}`;
+        signalElement.setAttribute('data-asset-id', signal.asset_id);
+        signalElement.innerHTML = `
+            <div class="signal-header">
+                <span class="signal-type ${signal.type.toLowerCase()}">${signal.type}</span>
+                <span class="signal-asset">${signal.asset_name}</span>
+                <span class="signal-confidence">${signal.confidence}%</span>
+            </div>
+            <div class="signal-details">
+                <div class="signal-price">السعر: ${this.formatPrice(signal.price, signal.asset_id)}</div>
+                <div class="signal-reason">${signal.reason}</div>
+                <div class="signal-time">${new Date(signal.timestamp * 1000).toLocaleTimeString('ar-SA')}</div>
+            </div>
+        `;
+        
+        // Remove "no signals" message if exists
+        if (signalsList.textContent.includes('لا توجد إشارات')) {
+            signalsList.innerHTML = '';
+        }
+        
+        // Add to top of list
+        signalsList.insertBefore(signalElement, signalsList.firstChild);
+        
+        // Keep only last 5 signals
+        while (signalsList.children.length > 5) {
+            signalsList.removeChild(signalsList.lastChild);
+        }
+        
+        // Flash animation
+        signalElement.classList.add('flash');
+        setTimeout(() => signalElement.classList.remove('flash'), 2000);
+    }
+    
+    startSignalCountdown(assetId, seconds = 60) {
+        const signalElement = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!signalElement) return;
+        
+        let remaining = seconds;
+        let countdown = signalElement.querySelector('.signal-countdown');
+        
+        if (!countdown) {
+            countdown = document.createElement('div');
+            countdown.className = 'signal-countdown';
+            signalElement.appendChild(countdown);
+        }
+        
+        const timer = setInterval(() => {
+            remaining--;
+            countdown.textContent = `⏰ ${remaining}ث`;
+            
+            if (remaining > seconds * 0.6) {
+                countdown.className = 'signal-countdown green';
+            } else if (remaining > seconds * 0.3) {
+                countdown.className = 'signal-countdown yellow';
+            } else {
+                countdown.className = 'signal-countdown red';
+            }
+            
+            if (remaining <= 0) {
+                clearInterval(timer);
+                countdown.textContent = '⌛ انتهى';
+                setTimeout(() => countdown.remove(), 3000);
+            }
+        }, 1000);
+        
+        countdown.textContent = `⏰ ${seconds}ث`;
+        countdown.className = 'signal-countdown green';
     }
 }
 

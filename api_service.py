@@ -3,6 +3,7 @@ import requests
 import logging
 from typing import Dict, List, Optional
 import time
+import random
 
 class PriceService:
     def __init__(self):
@@ -26,6 +27,8 @@ class PriceService:
         # Store for price cache and alerts
         self.price_cache = {}
         self.alerts = {}  # {asset_id: [{'threshold': float, 'type': str, 'client_id': str}]}
+        self.signals_history = {}  # Track signal generation
+        self.last_signal_time = {}
         
         # Demo data fallback for when APIs fail
         self.demo_prices = {
@@ -174,3 +177,63 @@ class PriceService:
                 del self.alerts[asset_id][i]
         
         return triggered_alerts
+    
+    def generate_trading_signals(self, current_prices: Dict[str, Dict]) -> List[Dict]:
+        """Generate trading signals based on price movements"""
+        signals = []
+        current_time = time.time()
+        
+        for asset_id, price_data in current_prices.items():
+            # Only generate signals every 30-60 seconds per asset
+            if asset_id in self.last_signal_time:
+                if current_time - self.last_signal_time[asset_id] < 30:
+                    continue
+            
+            # Generate random signals for demo (in real app, use technical analysis)
+            if random.random() < 0.15:  # 15% chance of signal per check
+                signal_type = random.choice(['BUY', 'SELL'])
+                confidence = random.randint(70, 95)
+                
+                signal = {
+                    'asset_id': asset_id,
+                    'asset_name': price_data['name'],
+                    'type': signal_type,
+                    'price': price_data['price'],
+                    'confidence': confidence,
+                    'timestamp': current_time,
+                    'reason': self._get_signal_reason(signal_type)
+                }
+                
+                signals.append(signal)
+                self.last_signal_time[asset_id] = current_time
+                
+                # Store in history
+                if asset_id not in self.signals_history:
+                    self.signals_history[asset_id] = []
+                self.signals_history[asset_id].append(signal)
+                
+                # Keep only last 10 signals per asset
+                if len(self.signals_history[asset_id]) > 10:
+                    self.signals_history[asset_id] = self.signals_history[asset_id][-10:]
+        
+        return signals
+    
+    def _get_signal_reason(self, signal_type: str) -> str:
+        """Get a reason for the trading signal"""
+        buy_reasons = [
+            "اختراق مستوى مقاومة قوي",
+            "إشارة إيجابية من المؤشرات الفنية", 
+            "زخم صاعد قوي",
+            "دعم قوي عند هذا المستوى",
+            "نمط صاعد واضح"
+        ]
+        
+        sell_reasons = [
+            "كسر مستوى دعم مهم",
+            "إشارة سلبية من المؤشرات",
+            "ضعف في الزخم الصاعد", 
+            "مقاومة قوية عند هذا المستوى",
+            "نمط هابط واضح"
+        ]
+        
+        return random.choice(buy_reasons if signal_type == 'BUY' else sell_reasons)

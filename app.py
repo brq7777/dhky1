@@ -57,6 +57,25 @@ def handle_disconnect():
     """Handle client disconnection"""
     logging.info('Client disconnected')
 
+@socketio.on('test_signal')
+def handle_test_signal(data):
+    """Generate a test trading signal"""
+    asset_id = data.get('asset_id', 'BTCUSDT')
+    asset_name = next((a['name'] for a in price_service.assets if a['id'] == asset_id), 'بيتكوين')
+    
+    test_signal = {
+        'asset_id': asset_id,
+        'asset_name': asset_name,
+        'type': 'BUY',
+        'price': 65000.00,
+        'confidence': 85,
+        'timestamp': time.time(),
+        'reason': 'إشارة تجريبية للاختبار'
+    }
+    
+    emit('trading_signal', test_signal)
+    logging.info(f"Test signal sent: {test_signal}")
+
 @socketio.on('subscribe_alerts')
 def handle_subscribe_alerts(data):
     """Handle alert subscription"""
@@ -92,6 +111,12 @@ def price_monitor():
             for alert in triggered_alerts:
                 socketio.emit('alert_triggered', alert)
                 logging.info(f"Alert triggered: {alert}")
+            
+            # Generate trading signals
+            signals = price_service.generate_trading_signals(prices)
+            for signal in signals:
+                socketio.emit('trading_signal', signal)
+                logging.info(f"Trading signal: {signal['type']} {signal['asset_name']} at {signal['price']}")
             
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
