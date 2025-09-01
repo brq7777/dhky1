@@ -46,7 +46,7 @@ with app.app_context():
     db.create_all()
     
     # إنشاء المستخدم الافتراضي كمدير
-    admin_email = "abodhayym2020@gmail.com"
+    admin_email = "brq7787@gmail.com"
     admin_password = "Msken2009"
     
     admin_user = User()
@@ -78,30 +78,8 @@ with app.app_context():
 @app.route('/')
 @login_required
 def index():
-    """الصفحة الرئيسية للوحة التحكم - تتطلب تسجيل الدخول واشتراك نشط"""
-    # التحقق من إمكانية الوصول للوحة التحكم
-    if not current_user.can_access_dashboard():
-        flash('انتهت فترة التجربة المجانية. يرجى الاشتراك للمتابعة.', 'warning')
-        return redirect(url_for('subscription'))
-    
-    # عرض معلومات الاشتراك للمستخدم
-    trial_hours = current_user.get_trial_remaining_hours()
-    subscription_info = {
-        'is_trial': current_user.subscription and current_user.subscription.status == 'trial',
-        'trial_remaining_hours': trial_hours,
-        'is_admin': current_user.is_admin,
-        'has_active_subscription': current_user.has_active_subscription()
-    }
-    
-    # إضافة معلومات الاشتراك بشكل أكثر تفصيل
-    subscription_status = {
-        'is_trial': current_user.subscription and current_user.subscription.status == 'trial',
-        'trial_remaining_hours': trial_hours,
-        'is_active': current_user.has_active_subscription() and current_user.subscription.status != 'trial',
-        'end_date': current_user.subscription.subscription_end if current_user.subscription else None
-    }
-    
-    return render_template('index.html', user=current_user, subscription=subscription_info, subscription_status=subscription_status)
+    """الصفحة الرئيسية للوحة التحكم - تتطلب تسجيل الدخول فقط"""
+    return render_template('index.html', user=current_user)
 
 @app.route('/api/prices')
 def get_prices():
@@ -139,20 +117,25 @@ def get_system_status():
 # مسارات المصادقة
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """صفحة تسجيل الدخول"""
+    """صفحة تسجيل الدخول - للمدير فقط"""
     from flask_login import login_user
     
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         
-        if not email or not password:
-            flash('يرجى إدخال الإيميل وكلمة المرور', 'error')
-            return render_template('login.html')
-        
-        user = User.query.filter_by(email=email).first()
-        
-        if user and user.check_password(password):
+        # التحقق من الإيميل والباسورد المحددين فقط
+        if email == 'brq7787@gmail.com' and password == 'Msken2009':
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                # إنشاء المستخدم إذا لم يكن موجوداً
+                user = User()
+                user.email = email
+                user.set_password(password)
+                user.is_admin = True
+                db.session.add(user)
+                db.session.commit()
+            
             login_user(user)
             next_page = request.args.get('next')
             if next_page:
@@ -163,202 +146,6 @@ def login():
     
     return render_template('login.html')
 
-@app.route('/subscription')
-@login_required
-def subscription():
-    """صفحة الاشتراك والدفع"""
-    # التحقق من وجود اشتراك نشط
-    if current_user.has_active_subscription() and not current_user.subscription.status == 'trial':
-        flash('لديك اشتراك نشط بالفعل', 'info')
-        return redirect(url_for('index'))
-    
-    trial_hours = current_user.get_trial_remaining_hours()
-    subscription_info = {
-        'is_trial': current_user.subscription and current_user.subscription.status == 'trial',
-        'trial_remaining_hours': trial_hours,
-        'amount': 500,
-        'currency': 'SAR'
-    }
-    
-    return render_template('subscription.html', subscription=subscription_info)
-
-@app.route('/payment/bank-transfer')
-@login_required
-def bank_transfer_payment():
-    """صفحة الدفع عبر التحويل البنكي"""
-    bank_info = {
-        'iban': 'SA1234567890123456789012',  # ضع الإيبان الفعلي هنا
-        'bank_name': 'البنك الأهلي السعودي',
-        'account_name': 'شركة الأصول المالية للاستثمار',
-        'amount': 500,
-        'currency': 'ريال سعودي',
-        'monthly_fee': '500 ريال شهرياً'
-    }
-    
-    return render_template('bank_transfer.html', bank_info=bank_info)
-
-# مسارات الإدارة
-@app.route('/admin')
-@login_required
-def admin_dashboard():
-    """لوحة الإدارة - للمدير فقط"""
-    if not current_user.is_admin:
-        flash('ليس لديك صلاحية للوصول لهذه الصفحة', 'error')
-        return redirect(url_for('index'))
-    
-    # إحصائيات سريعة
-    stats = {
-        'total_users': User.query.count(),
-        'active_subscribers': User.query.join(Subscription).filter(
-            Subscription.status == 'active'
-        ).count(),
-        'trial_users': User.query.join(Subscription).filter(
-            Subscription.status == 'trial'
-        ).count(),
-        'pending_payments': PaymentRequest.query.filter_by(status='pending').count()
-    }
-    
-    # طلبات الدفع المعلقة
-    payment_requests = PaymentRequest.query.filter_by(status='pending').order_by(
-        PaymentRequest.created_at.desc()
-    ).all()
-    
-    # جميع المستخدمين
-    users = User.query.order_by(User.created_at.desc()).all()
-    
-    # التعليقات المعلقة
-    pending_comments = Comment.query.filter_by(is_approved=False).order_by(
-        Comment.created_at.desc()
-    ).all()
-    
-    return render_template('admin.html', 
-                         stats=stats, 
-                         payment_requests=payment_requests,
-                         users=users,
-                         pending_comments=pending_comments)
-
-@app.route('/admin/approve-payment/<int:request_id>', methods=['POST'])
-@login_required
-def admin_approve_payment(request_id):
-    """الموافقة على طلب دفع"""
-    if not current_user.is_admin:
-        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
-        return redirect(url_for('index'))
-    
-    payment_request = PaymentRequest.query.get_or_404(request_id)
-    
-    try:
-        payment_request.approve_payment(current_user.id)
-        flash(f'تم الموافقة على طلب الدفع للمستخدم {payment_request.user.email}', 'success')
-    except Exception as e:
-        flash(f'خطأ في الموافقة على الطلب: {str(e)}', 'error')
-    
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/reject-payment/<int:request_id>', methods=['POST'])  
-@login_required
-def admin_reject_payment(request_id):
-    """رفض طلب دفع"""
-    if not current_user.is_admin:
-        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
-        return redirect(url_for('index'))
-    
-    payment_request = PaymentRequest.query.get_or_404(request_id)
-    
-    try:
-        payment_request.reject_payment(current_user.id, 'تم الرفض من قبل المدير')
-        flash(f'تم رفض طلب الدفع للمستخدم {payment_request.user.email}', 'info')
-    except Exception as e:
-        flash(f'خطأ في رفض الطلب: {str(e)}', 'error')
-    
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/approve-comment/<int:comment_id>', methods=['POST'])
-@login_required
-def admin_approve_comment(comment_id):
-    """الموافقة على تعليق"""
-    if not current_user.is_admin:
-        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
-        return redirect(url_for('index'))
-    
-    comment = Comment.query.get_or_404(comment_id)
-    
-    try:
-        comment.approve()
-        flash('تم الموافقة على التعليق', 'success')
-    except Exception as e:
-        flash(f'خطأ في الموافقة على التعليق: {str(e)}', 'error')
-    
-    return redirect(url_for('admin_dashboard'))
-
-@app.route('/admin/reject-comment/<int:comment_id>', methods=['POST'])
-@login_required
-def admin_reject_comment(comment_id):
-    """رفض وحذف تعليق"""
-    if not current_user.is_admin:
-        flash('ليس لديك صلاحية لهذا الإجراء', 'error')
-        return redirect(url_for('index'))
-    
-    comment = Comment.query.get_or_404(comment_id)
-    
-    try:
-        comment.reject()
-        flash('تم رفض وحذف التعليق', 'info')
-    except Exception as e:
-        flash(f'خطأ في رفض التعليق: {str(e)}', 'error')
-    
-    return redirect(url_for('admin_dashboard'))
-
-# صفحة الشروط والأحكام
-@app.route('/terms')
-def terms():
-    """صفحة الشروط والأحكام"""
-    return render_template('terms.html')
-
-@app.route('/payment/submit-transfer', methods=['POST'])
-@login_required
-def submit_transfer():
-    """إرسال إثبات التحويل البنكي"""
-    transfer_reference = request.form.get('transfer_reference')
-    transfer_date = request.form.get('transfer_date')
-    transfer_amount = request.form.get('transfer_amount')
-    notes = request.form.get('notes', '')
-    
-    if not transfer_reference or not transfer_date or not transfer_amount:
-        flash('يرجى إدخال جميع البيانات المطلوبة', 'error')
-        return redirect(url_for('bank_transfer_payment'))
-    
-    # التحقق من المبلغ
-    try:
-        amount = float(transfer_amount)
-        if amount < 500:
-            flash('المبلغ المحول يجب أن يكون 500 ريال على الأقل', 'error')
-            return redirect(url_for('bank_transfer_payment'))
-    except ValueError:
-        flash('يرجى إدخال مبلغ صحيح', 'error')
-        return redirect(url_for('bank_transfer_payment'))
-    
-    # إنشاء طلب تفعيل اشتراك
-    payment_request = PaymentRequest()
-    payment_request.user_id = current_user.id
-    payment_request.amount = amount
-    payment_request.currency = 'SAR'
-    payment_request.payment_method = 'bank_transfer'
-    payment_request.transfer_reference = transfer_reference
-    payment_request.transfer_date = transfer_date
-    payment_request.notes = notes
-    payment_request.status = 'pending'
-    
-    try:
-        db.session.add(payment_request)
-        db.session.commit()
-        flash('تم إرسال طلب التفعيل بنجاح! سيتم مراجعته خلال 24 ساعة وتفعيل اشتراكك.', 'success')
-        return redirect(url_for('index'))
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"خطأ في حفظ طلب الدفع: {e}")
-        flash('حدث خطأ أثناء إرسال الطلب', 'error')
-        return redirect(url_for('bank_transfer_payment'))
 
 @app.route('/register-new-user', methods=['GET', 'POST'])
 def register_new_user():
