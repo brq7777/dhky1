@@ -59,6 +59,10 @@ class TradingDashboard {
         this.socket.on('trading_signal', (signal) => {
             this.handleTradingSignal(signal);
         });
+        
+        this.socket.on('system_status', (status) => {
+            this.updateSystemStatus(status);
+        });
     }
     
     updateConnectionStatus(connected) {
@@ -71,6 +75,19 @@ class TradingDashboard {
         } else {
             statusDot.className = 'status-dot offline';
             statusText.textContent = 'غير متصل';
+        }
+    }
+    
+    updateSystemStatus(status) {
+        const statusText = document.getElementById('connection-text');
+        const statusDot = document.getElementById('connection-status');
+        
+        if (status.offline_mode) {
+            statusDot.className = 'status-dot offline-mode';
+            statusText.textContent = 'وضع عدم الاتصال - يعمل محلياً';
+        } else {
+            statusDot.className = 'status-dot online';
+            statusText.textContent = 'متصل - بيانات حية';
         }
     }
     

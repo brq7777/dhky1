@@ -54,6 +54,11 @@ body {
     background-color: #dc2626;
 }
 
+.status-dot.offline-mode {
+    background-color: #f97316;
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.3);
+}
+
 @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.5; }

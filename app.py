@@ -46,6 +46,16 @@ def get_price(asset_id):
         logging.error(f"Error fetching price for {asset_id}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/status')
+def get_system_status():
+    """Get system status including offline mode"""
+    try:
+        status = price_service.get_system_status()
+        return jsonify({'success': True, 'data': status})
+    except Exception as e:
+        logging.error(f"Error fetching system status: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection"""
@@ -85,9 +95,12 @@ def handle_subscribe_alerts(data):
     
     logging.info(f"Alert subscription: {asset_id}, {threshold}, {alert_type}")
     
-    # Store alert in price service
-    from flask import session
-    client_id = request.sid if hasattr(request, 'sid') else session.get('client_id', 'default')
+    # Store alert in price service  
+    try:
+        from flask import session
+        client_id = session.get('client_id', 'default')
+    except:
+        client_id = 'default'
     price_service.add_alert(asset_id, threshold, alert_type, client_id)
     
     emit('alert_subscribed', {
@@ -105,6 +118,10 @@ def price_monitor():
             
             # Emit price updates to all connected clients
             socketio.emit('price_update', prices)
+            
+            # Emit system status including offline mode
+            status = price_service.get_system_status()
+            socketio.emit('system_status', status)
             
             # Check for triggered alerts
             triggered_alerts = price_service.check_alerts(prices)

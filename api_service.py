@@ -11,6 +11,12 @@ class PriceService:
         self.twelve_data_key = os.getenv("TWELVE_DATA_API_KEY", "4589b5620aa8448faf709e192a1ae8f1")
         self.twelve_data_base_url = "https://api.twelvedata.com"
         
+        # Offline mode tracking
+        self.offline_mode = False
+        self.api_failure_count = {}
+        self.last_api_success = {}
+        self.offline_mode_threshold = 5  # Switch to offline after 5 consecutive failures
+        
         # Asset definitions
         self.assets = [
             {'id': 'BTCUSDT', 'name': 'بيتكوين', 'type': 'crypto', 'source': 'binance'},
@@ -30,7 +36,7 @@ class PriceService:
         self.signals_history = {}  # Track signal generation
         self.last_signal_time = {}
         
-        # Demo data fallback for when APIs fail
+        # Demo data fallback for when APIs fail - more realistic starting prices
         self.demo_prices = {
             'BTCUSDT': 65234.50,
             'ETHUSDT': 3456.78,
@@ -43,24 +49,41 @@ class PriceService:
             'USD/CHF': 0.8834
         }
         
+        # Persistent price tracking for offline mode
+        self.price_trends = {asset_id: {'direction': 1, 'momentum': 0.001} for asset_id in self.demo_prices.keys()}
+        
     def get_binance_price(self, symbol: str) -> Optional[float]:
-        """Get price from Binance API"""
+        """Get price from Binance API with offline mode detection"""
+        # Skip API call if in offline mode
+        if self.offline_mode:
+            return None
+            
         try:
             url = f"{self.binance_base_url}/ticker/price"
             params = {'symbol': symbol}
             
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=5)  # Reduced timeout
             response.raise_for_status()
             
             data = response.json()
-            return float(data['price'])
+            price = float(data['price'])
+            
+            # Reset failure count on success
+            self.api_failure_count[symbol] = 0
+            self.last_api_success[symbol] = time.time()
+            return price
             
         except Exception as e:
             logging.error(f"Error fetching Binance price for {symbol}: {e}")
+            self._handle_api_failure(symbol)
             return None
     
     def get_twelve_data_price(self, symbol: str) -> Optional[float]:
-        """Get price from TwelveData API"""
+        """Get price from TwelveData API with offline mode detection"""
+        # Skip API call if in offline mode
+        if self.offline_mode:
+            return None
+            
         try:
             url = f"{self.twelve_data_base_url}/price"
             params = {
@@ -68,18 +91,24 @@ class PriceService:
                 'apikey': self.twelve_data_key
             }
             
-            response = requests.get(url, params=params, timeout=10)
+            response = requests.get(url, params=params, timeout=5)  # Reduced timeout
             response.raise_for_status()
             
             data = response.json()
             if 'price' in data:
-                return float(data['price'])
+                price = float(data['price'])
+                # Reset failure count on success
+                self.api_failure_count[symbol] = 0
+                self.last_api_success[symbol] = time.time()
+                return price
             else:
                 logging.error(f"No price data in response for {symbol}: {data}")
+                self._handle_api_failure(symbol)
                 return None
                 
         except Exception as e:
             logging.error(f"Error fetching TwelveData price for {symbol}: {e}")
+            self._handle_api_failure(symbol)
             return None
     
     def get_price(self, asset_id: str) -> Optional[Dict]:
@@ -94,14 +123,11 @@ class PriceService:
         elif asset['source'] == 'twelve':
             price = self.get_twelve_data_price(asset_id)
         
-        # Fallback to demo data if API fails
+        # Fallback to demo data if API fails - enhanced offline mode
         if price is None and asset_id in self.demo_prices:
-            import random
-            base_price = self.demo_prices[asset_id]
-            # Add small random variation to simulate price movement
-            variation = random.uniform(-0.02, 0.02)  # ±2% variation
-            price = base_price * (1 + variation)
-            logging.info(f"Using demo price for {asset_id}: {price}")
+            price = self._generate_offline_price(asset_id)
+            status = "OFFLINE" if self.offline_mode else "DEMO"
+            logging.info(f"Using {status} price for {asset_id}: {price}")
         
         if price is not None:
             price_data = {
@@ -237,3 +263,63 @@ class PriceService:
         ]
         
         return random.choice(buy_reasons if signal_type == 'BUY' else sell_reasons)
+    
+    def _handle_api_failure(self, symbol: str):
+        """Handle API failure and detect offline mode"""
+        if symbol not in self.api_failure_count:
+            self.api_failure_count[symbol] = 0
+        
+        self.api_failure_count[symbol] += 1
+        
+        # Check if we should switch to offline mode
+        total_failures = sum(self.api_failure_count.values())
+        if total_failures >= self.offline_mode_threshold and not self.offline_mode:
+            self.offline_mode = True
+            logging.warning("SWITCHING TO OFFLINE MODE - APIs consistently failing")
+    
+    def _generate_offline_price(self, asset_id: str) -> float:
+        """Generate realistic price movements for offline mode"""
+        if asset_id not in self.demo_prices:
+            return 0.0
+        
+        # Get base price - use cached price if available, otherwise demo price
+        if asset_id in self.price_cache:
+            base_price = self.price_cache[asset_id]['price']
+        else:
+            base_price = self.demo_prices[asset_id]
+        
+        # Get trend data
+        trend = self.price_trends.get(asset_id, {'direction': 1, 'momentum': 0.001})
+        
+        # Generate realistic price movement
+        # Random walk with momentum
+        momentum_change = random.uniform(-0.0002, 0.0002)
+        trend['momentum'] = max(-0.005, min(0.005, trend['momentum'] + momentum_change))
+        
+        # Occasional trend reversals
+        if random.random() < 0.05:  # 5% chance of trend change
+            trend['direction'] *= -1
+        
+        # Calculate price change
+        base_variation = random.uniform(-0.001, 0.001)  # Small random noise
+        trend_variation = trend['direction'] * trend['momentum']
+        total_variation = base_variation + trend_variation
+        
+        # Apply change
+        new_price = base_price * (1 + total_variation)
+        
+        # Update trend
+        self.price_trends[asset_id] = trend
+        
+        return new_price
+    
+    def get_system_status(self) -> Dict:
+        """Get system status including offline mode"""
+        current_time = time.time()
+        return {
+            'offline_mode': self.offline_mode,
+            'api_failures': dict(self.api_failure_count),
+            'last_api_success': {k: current_time - v for k, v in self.last_api_success.items()},
+            'total_assets': len(self.assets),
+            'cached_prices': len(self.price_cache)
+        }
