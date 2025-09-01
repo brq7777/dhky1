@@ -33,15 +33,47 @@ class TradingDashboard {
     }
     
     initializeSocket() {
-        this.socket = io();
+        // Initialize with optimized settings for fast reconnection
+        this.socket = io({
+            timeout: 5000,              // Faster connection timeout
+            reconnection: true,         // Enable auto-reconnection
+            reconnectionDelay: 1000,    // Start reconnection attempts after 1s
+            reconnectionAttempts: 50,   // Try many times to reconnect
+            maxReconnectionAttempts: 50,
+            reconnectionDelayMax: 5000, // Max delay between attempts
+            forceNew: false,            // Reuse existing connection
+            transports: ['websocket', 'polling']  // Try websocket first, fallback to polling
+        });
         
         this.socket.on('connect', () => {
             console.log('Connected to server');
             this.updateConnectionStatus(true);
+            this.resetReconnectionAttempts();
         });
         
-        this.socket.on('disconnect', () => {
-            console.log('Disconnected from server');
+        this.socket.on('disconnect', (reason) => {
+            console.log('Disconnected from server:', reason);
+            this.updateConnectionStatus(false);
+            this.handleDisconnection(reason);
+        });
+        
+        this.socket.on('connect_error', (error) => {
+            console.log('Connection error:', error);
+            this.updateConnectionStatus(false);
+        });
+        
+        this.socket.on('reconnect', (attemptNumber) => {
+            console.log('Reconnected after', attemptNumber, 'attempts');
+            this.updateConnectionStatus(true);
+        });
+        
+        this.socket.on('reconnect_attempt', (attemptNumber) => {
+            console.log('Reconnection attempt:', attemptNumber);
+            this.updateReconnectionStatus(attemptNumber);
+        });
+        
+        this.socket.on('reconnect_failed', () => {
+            console.log('Reconnection failed');
             this.updateConnectionStatus(false);
         });
         
@@ -83,10 +115,36 @@ class TradingDashboard {
         if (connected) {
             statusDot.className = 'status-dot online';
             statusText.textContent = 'متصل';
+            // Clear any reconnection status
+            clearTimeout(this.reconnectionTimer);
         } else {
             statusDot.className = 'status-dot offline';
             statusText.textContent = 'غير متصل';
         }
+    }
+    
+    handleDisconnection(reason) {
+        // Handle different disconnection reasons
+        if (reason === 'transport close' || reason === 'transport error') {
+            // Network issue - socket will auto-reconnect
+            console.log('Network issue detected, auto-reconnecting...');
+        } else if (reason === 'io server disconnect') {
+            // Server initiated disconnect - need manual reconnection
+            console.log('Server disconnect, attempting manual reconnection...');
+            setTimeout(() => {
+                this.socket.connect();
+            }, 2000);
+        }
+    }
+    
+    updateReconnectionStatus(attemptNumber) {
+        const statusText = document.getElementById('connection-text');
+        statusText.textContent = `محاولة إعادة الاتصال ${attemptNumber}...`;
+    }
+    
+    resetReconnectionAttempts() {
+        // Reset any reconnection UI state
+        clearTimeout(this.reconnectionTimer);
     }
     
     updateSystemStatus(status) {

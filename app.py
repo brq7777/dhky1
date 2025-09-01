@@ -33,8 +33,13 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for real-time updates
-socketio = SocketIO(app, cors_allowed_origins="*")
+# Initialize SocketIO for real-time updates with optimized settings
+socketio = SocketIO(app, 
+                   cors_allowed_origins="*", 
+                   ping_timeout=10,        # Faster timeout detection
+                   ping_interval=5,        # More frequent heartbeat
+                   logger=False,           # Reduce logging overhead
+                   engineio_logger=False)  # Reduce logging overhead
 
 # Initialize price service
 price_service = PriceService()
@@ -318,27 +323,33 @@ def handle_subscribe_alert(data):
     })
 
 def price_monitor():
-    """Background task to monitor prices and send updates"""
+    """Background task to monitor prices and send updates - optimized for speed"""
+    last_system_status_update = 0
     while True:
+        start_time = time.time()
         try:
-            # Get current prices
-            prices = price_service.get_all_prices()
+            # Get current prices - optimized call
+            prices = price_service.get_all_prices_fast()
             
-            # Emit price updates to all connected clients
-            socketio.emit('price_update', prices)
+            # Only emit if prices actually changed to reduce network traffic
+            if prices and price_service.has_price_changes():
+                socketio.emit('price_update', prices)
             
-            # Emit system status including offline mode
-            status = price_service.get_system_status()
-            socketio.emit('system_status', status)
+            # Emit system status less frequently (every 15 seconds)
+            current_time = time.time()
+            if current_time - last_system_status_update > 15:
+                status = price_service.get_system_status()
+                socketio.emit('system_status', status)
+                last_system_status_update = current_time
             
-            # Check for triggered alerts
-            triggered_alerts = price_service.check_alerts(prices)
+            # Check for triggered alerts - optimized
+            triggered_alerts = price_service.check_alerts_fast(prices)
             for alert in triggered_alerts:
                 socketio.emit('alert_triggered', alert)
                 logging.info(f"Alert triggered: {alert}")
             
-            # Generate trading signals
-            signals = price_service.generate_trading_signals(prices)
+            # Generate trading signals - optimized frequency
+            signals = price_service.generate_trading_signals_fast(prices)
             for signal in signals:
                 socketio.emit('trading_signal', signal)
                 logging.info(f"Trading signal: {signal['type']} {signal['asset_name']} at {signal['price']}")
@@ -346,7 +357,10 @@ def price_monitor():
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        time.sleep(5)  # Update every 5 seconds
+        # Dynamic sleep time based on processing time
+        processing_time = time.time() - start_time
+        sleep_time = max(2, 3 - processing_time)  # Faster updates (2-3 seconds)
+        time.sleep(sleep_time)
 
 # Start background price monitoring
 price_monitor_thread = threading.Thread(target=price_monitor, daemon=True)

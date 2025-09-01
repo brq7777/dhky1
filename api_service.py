@@ -15,7 +15,7 @@ class PriceService:
         self.offline_mode = False
         self.api_failure_count = {}
         self.last_api_success = {}
-        self.offline_mode_threshold = 5  # Switch to offline after 5 consecutive failures
+        self.offline_mode_threshold = 3  # Switch to offline after 3 consecutive failures for faster detection
         
         # Asset definitions
         self.assets = [
@@ -30,11 +30,13 @@ class PriceService:
             {'id': 'USD/CHF', 'name': 'USD/CHF', 'type': 'forex', 'source': 'twelve'},
         ]
         
-        # Store for price cache and alerts
+        # Store for price cache and alerts - optimized
         self.price_cache = {}
+        self.previous_prices = {}  # Track price changes
         self.alerts = {}  # {asset_id: [{'threshold': float, 'type': str, 'client_id': str}]}
         self.signals_history = {}  # Track signal generation
         self.last_signal_time = {}
+        self.last_alert_check = {}  # Optimize alert checking
         
         # Demo data fallback for when APIs fail - more realistic starting prices
         self.demo_prices = {
@@ -52,6 +54,13 @@ class PriceService:
         # Persistent price tracking for offline mode
         self.price_trends = {asset_id: {'direction': 1, 'momentum': 0.001} for asset_id in self.demo_prices.keys()}
         
+        # Connection optimization - reuse connections for better performance
+        self.session = requests.Session()
+        # Set connection pool size for better performance
+        adapter = requests.adapters.HTTPAdapter(pool_connections=20, pool_maxsize=20)
+        self.session.mount('https://', adapter)
+        self.session.mount('http://', adapter)
+        
     def get_binance_price(self, symbol: str) -> Optional[float]:
         """Get price from Binance API with offline mode detection"""
         # Skip API call if in offline mode
@@ -62,7 +71,7 @@ class PriceService:
             url = f"{self.binance_base_url}/ticker/price"
             params = {'symbol': symbol}
             
-            response = requests.get(url, params=params, timeout=5)  # Reduced timeout
+            response = self.session.get(url, params=params, timeout=2)  # Fast timeout for better responsiveness
             response.raise_for_status()
             
             data = response.json()
@@ -91,7 +100,7 @@ class PriceService:
                 'apikey': self.twelve_data_key
             }
             
-            response = requests.get(url, params=params, timeout=5)  # Reduced timeout
+            response = self.session.get(url, params=params, timeout=2)  # Fast timeout for better responsiveness
             response.raise_for_status()
             
             data = response.json()
@@ -151,6 +160,49 @@ class PriceService:
                 prices[asset['id']] = price_data
         
         return prices
+    
+    def get_all_prices_fast(self) -> Dict[str, Dict]:
+        """Get prices for all assets - optimized version"""
+        prices = {}
+        # Use threading for parallel API calls when not in offline mode
+        if not self.offline_mode:
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                futures = {executor.submit(self.get_price, asset['id']): asset['id'] for asset in self.assets}
+                for future in concurrent.futures.as_completed(futures, timeout=3):
+                    try:
+                        asset_id = futures[future]
+                        price_data = future.result()
+                        if price_data:
+                            prices[asset_id] = price_data
+                    except Exception as e:
+                        logging.error(f"Error fetching price in parallel: {e}")
+        else:
+            # Sequential for offline mode
+            for asset in self.assets:
+                price_data = self.get_price(asset['id'])
+                if price_data:
+                    prices[asset['id']] = price_data
+        
+        return prices
+    
+    def has_price_changes(self) -> bool:
+        """Check if prices have significantly changed since last update"""
+        if not self.previous_prices:
+            self.previous_prices = dict(self.price_cache)
+            return True
+        
+        # Check for significant changes (>0.01%)
+        for asset_id, current_data in self.price_cache.items():
+            if asset_id in self.previous_prices:
+                old_price = self.previous_prices[asset_id]['price']
+                new_price = current_data['price']
+                change_percent = abs((new_price - old_price) / old_price) * 100
+                if change_percent > 0.01:  # 0.01% threshold
+                    self.previous_prices = dict(self.price_cache)
+                    return True
+        
+        return False
     
     def add_alert(self, asset_id: str, threshold: Optional[float] = None, alert_type: str = 'general', client_id: str = 'default'):
         """Add a price alert"""
@@ -217,6 +269,27 @@ class PriceService:
         
         return triggered_alerts
     
+    def check_alerts_fast(self, current_prices: Dict[str, Dict]) -> List[Dict]:
+        """Optimized alert checking - only check if prices changed significantly"""
+        if not current_prices:
+            return []
+        
+        current_time = time.time()
+        triggered_alerts = []
+        
+        for asset_id, price_data in current_prices.items():
+            # Skip if checked recently and no significant change
+            if asset_id in self.last_alert_check:
+                if current_time - self.last_alert_check[asset_id] < 2:  # Check every 2 seconds max
+                    continue
+            
+            if asset_id in self.alerts and self.alerts[asset_id]:
+                alerts = self.check_alerts({asset_id: price_data})
+                triggered_alerts.extend(alerts)
+                self.last_alert_check[asset_id] = current_time
+        
+        return triggered_alerts
+    
     def generate_trading_signals(self, current_prices: Dict[str, Dict]) -> List[Dict]:
         """Generate trading signals based on price movements"""
         signals = []
@@ -254,6 +327,47 @@ class PriceService:
                 # Keep only last 10 signals per asset
                 if len(self.signals_history[asset_id]) > 10:
                     self.signals_history[asset_id] = self.signals_history[asset_id][-10:]
+        
+        return signals
+    
+    def generate_trading_signals_fast(self, current_prices: Dict[str, Dict]) -> List[Dict]:
+        """Optimized signal generation - higher frequency for better responsiveness"""
+        signals = []
+        current_time = time.time()
+        
+        for asset_id, price_data in current_prices.items():
+            # Faster signal generation (15-25 seconds instead of 30-60)
+            if asset_id in self.last_signal_time:
+                time_since_last = current_time - self.last_signal_time[asset_id]
+                if time_since_last < 15:  # Minimum 15 seconds
+                    continue
+            
+            # Higher chance of signal generation (20% instead of 15%)
+            if random.random() < 0.20:
+                signal_type = random.choice(['BUY', 'SELL'])
+                confidence = random.randint(70, 95)
+                
+                signal = {
+                    'asset_id': asset_id,
+                    'asset_name': price_data['name'],
+                    'type': signal_type,
+                    'price': price_data['price'],
+                    'confidence': confidence,
+                    'timestamp': current_time,
+                    'reason': self._get_signal_reason(signal_type)
+                }
+                
+                signals.append(signal)
+                self.last_signal_time[asset_id] = current_time
+                
+                # Store in history (reduced history size for performance)
+                if asset_id not in self.signals_history:
+                    self.signals_history[asset_id] = []
+                self.signals_history[asset_id].append(signal)
+                
+                # Keep only last 5 signals per asset for faster processing
+                if len(self.signals_history[asset_id]) > 5:
+                    self.signals_history[asset_id] = self.signals_history[asset_id][-5:]
         
         return signals
     
