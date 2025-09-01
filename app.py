@@ -1,6 +1,6 @@
 import os
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
 from flask_socketio import SocketIO, emit
 from flask_login import LoginManager, login_required, logout_user, current_user
@@ -26,7 +26,7 @@ db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message = 'يرجى تسجيل الدخول للوصول إلى هذه الصفحة.'
+login_manager.login_message = 'يرجى تسجيل الدخول للوصول لهذه الصفحة.'
 login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
@@ -147,90 +147,6 @@ def login():
     return render_template('login.html')
 
 
-@app.route('/register-new-user', methods=['GET', 'POST'])
-def register_new_user():
-    """تسجيل مستخدم جديد للتجربة المجانية"""
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-        
-        # جمع معلومات بصمة الجهاز
-        user_agent = request.headers.get('User-Agent', '')
-        ip_address = request.remote_addr
-        screen_resolution = request.form.get('screen_resolution', '')
-        timezone = request.form.get('timezone', '')
-        language = request.form.get('language', 'ar')
-        
-        # إنشاء بصمة الجهاز
-        fingerprint_hash = DeviceFingerprint.generate_fingerprint(
-            user_agent, ip_address, screen_resolution, timezone, language
-        )
-        
-        # التحقق من استخدام التجربة المجانية مسبقاً
-        if DeviceFingerprint.has_used_trial(fingerprint_hash):
-            flash('تم استخدام التجربة المجانية مسبقاً من هذا الجهاز. يرجى الاشتراك للمتابعة.', 'error')
-            return render_template('register_new.html')
-        
-        # التحقق من صحة البيانات
-        if not email or not password or not confirm_password:
-            flash('يرجى ملء جميع الحقول', 'error')
-            return render_template('register_new.html')
-        
-        if password != confirm_password:
-            flash('كلمات المرور غير متطابقة', 'error')
-            return render_template('register_new.html')
-        
-        if len(password) < 6:
-            flash('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error')
-            return render_template('register_new.html')
-        
-        # التحقق من عدم وجود مستخدم بنفس الإيميل
-        if User.query.filter_by(email=email).first():
-            flash('الإيميل موجود بالفعل', 'error')
-            return render_template('register_new.html')
-        
-        # إنشاء مستخدم جديد
-        from flask_login import login_user
-        new_user = User()
-        new_user.email = email
-        new_user.username = email.split('@')[0]
-        new_user.set_password(password)
-        
-        try:
-            db.session.add(new_user)
-            db.session.commit()
-            
-            # إنشاء اشتراك تجريبي
-            trial_subscription = Subscription()
-            trial_subscription.user_id = new_user.id
-            trial_subscription.status = 'trial'
-            db.session.add(trial_subscription)
-            
-            # حفظ بصمة الجهاز
-            device_fingerprint = DeviceFingerprint()
-            device_fingerprint.user_id = new_user.id
-            device_fingerprint.fingerprint_hash = fingerprint_hash
-            device_fingerprint.user_agent = user_agent
-            device_fingerprint.ip_address = ip_address
-            device_fingerprint.screen_resolution = screen_resolution
-            device_fingerprint.timezone = timezone
-            device_fingerprint.language = language
-            device_fingerprint.trial_used = True
-            db.session.add(device_fingerprint)
-            
-            db.session.commit()
-            
-            login_user(new_user)
-            flash(f'مرحباً بك! لديك فترة تجريبية مجانية لمدة 12 ساعة.', 'success')
-            return redirect(url_for('index'))
-            
-        except Exception as e:
-            db.session.rollback()
-            logging.error(f"Error creating user: {e}")
-            flash('حدث خطأ أثناء إنشاء الحساب', 'error')
-    
-    return render_template('register_new.html')
 
 @app.route('/create-stripe-session', methods=['POST'])
 @login_required
