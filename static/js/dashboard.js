@@ -18,6 +18,7 @@ class TradingDashboard {
         this.prices = {};
         this.audioContext = null;
         this.currentAlertAsset = null;
+        this.autoRefresh = JSON.parse(localStorage.getItem('autoRefresh') || 'true');
         
         this.init();
     }
@@ -63,6 +64,16 @@ class TradingDashboard {
         this.socket.on('system_status', (status) => {
             this.updateSystemStatus(status);
         });
+    }
+    
+    updateAutoRefreshButton(btn) {
+        if (this.autoRefresh) {
+            btn.classList.add('active');
+            btn.textContent = '🔄 تحديث تلقائي - مفعل';
+        } else {
+            btn.classList.remove('active');
+            btn.textContent = '🔄 تحديث تلقائي - معطل';
+        }
     }
     
     updateConnectionStatus(connected) {
@@ -152,16 +163,44 @@ class TradingDashboard {
         const actions = document.createElement('div');
         actions.className = 'asset-actions';
         
-        const toggle = document.createElement('button');
-        toggle.className = 'toggle-btn ' + (this.isAlertOn(asset.id) ? 'on' : 'off');
-        toggle.setAttribute('data-id', asset.id);
-        toggle.textContent = this.isAlertOn(asset.id) ? 'شغال' : 'طافي';
+        // Create alert buttons container
+        const alertButtons = document.createElement('div');
+        alertButtons.className = 'alert-buttons';
         
-        toggle.addEventListener('click', () => {
-            this.toggleAlert(asset.id, toggle);
+        // ON button
+        const onBtn = document.createElement('button');
+        onBtn.className = 'alert-btn ' + (this.isAlertOn(asset.id) ? 'on' : 'inactive');
+        onBtn.setAttribute('data-id', asset.id);
+        onBtn.setAttribute('data-action', 'on');
+        onBtn.textContent = 'ON';
+        
+        // OFF button  
+        const offBtn = document.createElement('button');
+        offBtn.className = 'alert-btn ' + (this.isAlertOn(asset.id) ? 'inactive' : 'off');
+        offBtn.setAttribute('data-id', asset.id);
+        offBtn.setAttribute('data-action', 'off');
+        offBtn.textContent = 'OFF';
+        
+        onBtn.addEventListener('click', () => {
+            this.setAlert(asset.id, true, onBtn, offBtn);
         });
         
-        actions.appendChild(toggle);
+        offBtn.addEventListener('click', () => {
+            this.setAlert(asset.id, false, onBtn, offBtn);
+        });
+        
+        alertButtons.appendChild(onBtn);
+        alertButtons.appendChild(offBtn);
+        
+        const alertBtn = document.createElement('button');
+        alertBtn.className = 'sec-btn';
+        alertBtn.textContent = '⚠️';
+        alertBtn.addEventListener('click', () => {
+            this.openAlertModal(asset);
+        });
+        
+        actions.appendChild(alertButtons);
+        actions.appendChild(alertBtn);
         row.appendChild(name);
         row.appendChild(actions);
         
@@ -178,6 +217,19 @@ class TradingDashboard {
     
     isAlertOn(assetId) {
         return this.alertStates[assetId] === true;
+    }
+    
+    setAlert(assetId, isOn, onBtn, offBtn) {
+        this.alertStates[assetId] = isOn;
+        this.saveAlertStates();
+        
+        if (isOn) {
+            onBtn.className = 'alert-btn on';
+            offBtn.className = 'alert-btn inactive';
+        } else {
+            onBtn.className = 'alert-btn inactive';
+            offBtn.className = 'alert-btn off';
+        }
     }
     
     toggleAlert(assetId, button) {
@@ -237,6 +289,18 @@ class TradingDashboard {
                 setTimeout(() => {
                     audioTestBtn.textContent = '🔊 اختبار الصوت';
                 }, 2000);
+            });
+        }
+        
+        // Add auto refresh button handler
+        const autoRefreshBtn = document.getElementById('auto-refresh-btn');
+        if (autoRefreshBtn) {
+            this.updateAutoRefreshButton(autoRefreshBtn);
+            autoRefreshBtn.addEventListener('click', () => {
+                this.autoRefresh = !this.autoRefresh;
+                this.updateAutoRefreshButton(autoRefreshBtn);
+                localStorage.setItem('autoRefresh', this.autoRefresh);
+                console.log('Auto refresh:', this.autoRefresh ? 'ON' : 'OFF');
             });
         }
     }

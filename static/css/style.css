@@ -132,10 +132,15 @@ body {
     align-items: center;
 }
 
-.toggle-btn {
-    min-width: 90px;
-    height: 36px;
-    border-radius: 8px;
+.alert-buttons {
+    display: flex;
+    gap: 4px;
+}
+
+.alert-btn {
+    min-width: 40px;
+    height: 32px;
+    border-radius: 6px;
     border: 1px solid #333;
     color: #fff;
     font-weight: 700;
@@ -144,22 +149,34 @@ body {
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
 }
 
-.toggle-btn.on {
+.alert-btn.on {
     background: #16a34a;
     border-color: #16a34a;
 }
 
-.toggle-btn.off {
-    background: #0a0a0a;
-    border-color: #333;
+.alert-btn.off {
+    background: #dc2626;
+    border-color: #dc2626;
 }
 
-.toggle-btn:hover {
-    filter: brightness(1.1);
-    transform: scale(1.02);
+.alert-btn.inactive {
+    background: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
+}
+
+.alert-btn:hover:not(.inactive) {
+    filter: brightness(1.2);
+    transform: scale(1.05);
+}
+
+.sec-btn.active {
+    background: #059669;
+    border-color: #059669;
+    color: #fff;
 }
 
 .sec-btn {
