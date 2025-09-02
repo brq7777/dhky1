@@ -433,7 +433,7 @@ body {
 .assets-sections {
     display: grid;
     gap: 20px;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: 1fr;
 }
 
 .card {
@@ -773,10 +773,6 @@ body {
         font-size: 1.5rem;
     }
     
-    .assets-sections {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
     
     .asset-row {
         grid-template-columns: 1fr;
