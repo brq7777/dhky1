@@ -41,6 +41,7 @@ class PriceService:
         # Technical analysis data storage
         self.price_history = {}  # Store historical prices for analysis
         self.technical_indicators = {}  # Store calculated indicators
+        self.trend_analysis = {}  # Store trend analysis for each asset
         
         # Demo data fallback for when APIs fail - more realistic starting prices
         self.demo_prices = {
@@ -149,7 +150,8 @@ class PriceService:
                 'name': asset['name'],
                 'type': asset['type'],
                 'price': price,
-                'timestamp': time.time()
+                'timestamp': time.time(),
+                'trend': self.trend_analysis.get(asset_id, {})
             }
             self.price_cache[asset_id] = price_data
             return price_data
@@ -344,6 +346,11 @@ class PriceService:
             # Update price history for technical analysis
             self._update_price_history(asset_id, price_data['price'], current_time)
             
+            # Update trend analysis
+            if asset_id in self.price_history and len(self.price_history[asset_id]) >= 10:
+                prices = [p['price'] for p in self.price_history[asset_id]]
+                self.trend_analysis[asset_id] = self._analyze_market_trend(asset_id, prices)
+            
             # Only generate signals every 20-30 seconds per asset
             if asset_id in self.last_signal_time:
                 time_since_last = current_time - self.last_signal_time[asset_id]
@@ -432,6 +439,81 @@ class PriceService:
         
         return ((current_price - old_price) / old_price) * 100
     
+    def _analyze_market_trend(self, asset_id: str, prices: List[float]) -> Dict:
+        """تحليل اتجاه السوق للأصل"""
+        if len(prices) < 20:
+            return {
+                'trend': 'unknown',
+                'trend_ar': 'غير محدد',
+                'strength': 0,
+                'direction': '🔍',
+                'color': '#95a5a6'
+            }
+        
+        # حساب المتوسطات المتحركة
+        sma_5 = self._calculate_moving_average(prices, 5)
+        sma_10 = self._calculate_moving_average(prices, 10)
+        sma_20 = self._calculate_moving_average(prices, 20)
+        
+        current_price = prices[-1]
+        price_change_20 = self._calculate_price_change_percent(prices, 20)
+        rsi = self._calculate_rsi(prices)
+        
+        # تحديد الاتجاه
+        trend_signals = 0
+        
+        # إشارات الاتجاه الصاعد
+        if current_price > sma_5 > sma_10 > sma_20:
+            trend_signals += 3
+        elif current_price > sma_5 > sma_10:
+            trend_signals += 2
+        elif current_price > sma_5:
+            trend_signals += 1
+        
+        # إشارات الاتجاه الهابط
+        if current_price < sma_5 < sma_10 < sma_20:
+            trend_signals -= 3
+        elif current_price < sma_5 < sma_10:
+            trend_signals -= 2
+        elif current_price < sma_5:
+            trend_signals -= 1
+        
+        # تأكيد بـ RSI والزخم
+        if price_change_20 > 2 and rsi > 60:
+            trend_signals += 1
+        elif price_change_20 < -2 and rsi < 40:
+            trend_signals -= 1
+        
+        # تحديد الاتجاه النهائي
+        if trend_signals >= 2:
+            trend = 'uptrend'
+            trend_ar = 'صاعد'
+            direction = '📈'
+            color = '#27AE60'
+            strength = min(trend_signals * 20, 100)
+        elif trend_signals <= -2:
+            trend = 'downtrend'
+            trend_ar = 'هابط'
+            direction = '📉'
+            color = '#E74C3C'
+            strength = min(abs(trend_signals) * 20, 100)
+        else:
+            trend = 'sideways'
+            trend_ar = 'متذبذب'
+            direction = '↔️'
+            color = '#F39C12'
+            strength = 30
+        
+        return {
+            'trend': trend,
+            'trend_ar': trend_ar,
+            'strength': strength,
+            'direction': direction,
+            'color': color,
+            'rsi': round(rsi, 1),
+            'price_change_20': round(price_change_20, 2)
+        }
+    
     def _analyze_technical_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Optional[Dict]:
         """Analyze technical indicators and generate trading signal"""
         if asset_id not in self.price_history or len(self.price_history[asset_id]) < 10:
@@ -485,8 +567,11 @@ class PriceService:
                     signal_type = 'SELL'
                     reasons.append('Strong downward momentum')
         
-        # Only generate signal if strength is sufficient
-        if signal_strength >= 40 and signal_type:
+        # Only generate signal if strength is sufficient AND trend is clear
+        trend_info = self.trend_analysis.get(asset_id, {})
+        is_trending = trend_info.get('trend') in ['uptrend', 'downtrend']
+        
+        if signal_strength >= 40 and signal_type and is_trending:
             confidence = min(signal_strength + 30, 95)  # Convert strength to confidence
             
             return {

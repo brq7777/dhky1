@@ -191,10 +191,28 @@ class TradingDashboard {
         
         Object.keys(prices).forEach(assetId => {
             const priceElement = document.querySelector(`[data-price-id="${assetId}"]`);
+            const trendElement = document.querySelector(`[data-trend-id="${assetId}"]`);
+            
             if (priceElement) {
                 const price = prices[assetId].price;
                 priceElement.textContent = this.formatPrice(price, assetId);
                 priceElement.className = 'price';
+            }
+            
+            // Update trend indicator
+            if (trendElement && prices[assetId].trend) {
+                const trend = prices[assetId].trend;
+                if (trend.trend && trend.trend !== 'unknown') {
+                    trendElement.innerHTML = `
+                        <span class="trend-icon" style="color: ${trend.color}">${trend.direction}</span>
+                        <span class="trend-text" style="color: ${trend.color}">${trend.trend_ar}</span>
+                        <span class="trend-strength">${trend.strength}%</span>
+                    `;
+                    trendElement.style.borderColor = trend.color;
+                    trendElement.style.display = 'block';
+                } else {
+                    trendElement.style.display = 'none';
+                }
             }
         });
     }
@@ -227,7 +245,11 @@ class TradingDashboard {
         
         const name = document.createElement('div');
         name.className = 'asset-name';
-        name.innerHTML = `${asset.name} <span class="price" data-price-id="${asset.id}">--</span>`;
+        name.innerHTML = `
+            <div class="asset-title">${asset.name}</div>
+            <div class="price" data-price-id="${asset.id}">--</div>
+            <div class="trend-indicator" data-trend-id="${asset.id}" style="display: none;"></div>
+        `;
         
         const actions = document.createElement('div');
         actions.className = 'asset-actions';
