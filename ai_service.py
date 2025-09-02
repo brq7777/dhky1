@@ -24,6 +24,42 @@ class AITradingAnalyzer:
         
         logging.info("تم تهيئة نظام التحليل الذكي بنجاح")
     
+    def test_openai_connection(self) -> Dict:
+        """اختبار اتصال OpenAI API"""
+        try:
+            # اختبار بسيط لاتصال API
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "user", "content": "اختبار الاتصال - أجب بكلمة واحدة: نجح"}
+                ],
+                max_tokens=10,
+                temperature=0
+            )
+            
+            result_text = response.choices[0].message.content.strip()
+            
+            return {
+                "status": "success",
+                "connected": True,
+                "model": self.model,
+                "response_time": "سريع",
+                "test_response": result_text,
+                "message": "OpenAI API متصل ويعمل بشكل طبيعي"
+            }
+            
+        except Exception as e:
+            error_message = str(e)
+            logging.error(f"فشل في اختبار OpenAI API: {error_message}")
+            
+            return {
+                "status": "error", 
+                "connected": False,
+                "model": self.model,
+                "error": error_message,
+                "message": "فشل الاتصال مع OpenAI API - تحقق من مفتاح API أو الاتصال بالإنترنت"
+            }
+    
     def analyze_market_with_ai(self, asset_id: str, market_data: Dict) -> Optional[Dict]:
         """تحليل السوق باستخدام الذكاء الاصطناعي"""
         try:

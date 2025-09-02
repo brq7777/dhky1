@@ -610,15 +610,28 @@ class TradingDashboard {
     }
     
     addSignalsPanel() {
-        // Add test button to header controls
+        // Add test buttons to header controls
         const headerControls = document.querySelector('.header-controls .status-indicator');
+        
+        // Test signal button
         const testBtn = document.createElement('button');
         testBtn.textContent = '🔬 اختبار إشارة';
         testBtn.className = 'test-btn';
         testBtn.addEventListener('click', () => {
             this.testInlineSignal();
         });
+        
+        // Test OpenAI button
+        const testOpenAIBtn = document.createElement('button');
+        testOpenAIBtn.textContent = '🤖 اختبار OpenAI';
+        testOpenAIBtn.className = 'test-openai-btn';
+        testOpenAIBtn.id = 'test-openai-btn';
+        testOpenAIBtn.addEventListener('click', () => {
+            this.testOpenAIConnection();
+        });
+        
         headerControls.appendChild(testBtn);
+        headerControls.appendChild(testOpenAIBtn);
     }
     
     // وظائف إدارة التصاميم والخلفيات
@@ -712,6 +725,61 @@ class TradingDashboard {
         }
     }
     
+    testOpenAIConnection() {
+        const testBtn = document.getElementById('test-openai-btn');
+        if (!testBtn) return;
+        
+        // تعطيل الزر أثناء الاختبار
+        testBtn.disabled = true;
+        testBtn.textContent = '⏳ يتم الاختبار...';
+        
+        fetch('/api/test-openai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log('OpenAI test result:', result);
+            
+            if (result.success && result.data) {
+                const data = result.data;
+                if (data.connected) {
+                    // نجح الاختبار
+                    this.showNotification(`✅ OpenAI متصل بنجاح!
+النموذج: ${data.model}
+الرد: ${data.test_response}
+${data.message}`, 'success');
+                    testBtn.textContent = '✅ متصل';
+                    testBtn.style.backgroundColor = '#10b981';
+                } else {
+                    // فشل الاتصال
+                    this.showNotification(`❌ فشل الاتصال مع OpenAI
+السبب: ${data.message}`, 'error');
+                    testBtn.textContent = '❌ غير متصل';
+                    testBtn.style.backgroundColor = '#ef4444';
+                }
+            } else {
+                throw new Error(result.data ? result.data.message : 'فشل الاختبار');
+            }
+        })
+        .catch(error => {
+            console.error('Error testing OpenAI:', error);
+            this.showNotification(`❌ خطأ في اختبار OpenAI: ${error.message}`, 'error');
+            testBtn.textContent = '❌ خطأ';
+            testBtn.style.backgroundColor = '#ef4444';
+        })
+        .finally(() => {
+            // إعادة تفعيل الزر بعد 3 ثوان
+            setTimeout(() => {
+                testBtn.disabled = false;
+                testBtn.textContent = '🤖 اختبار OpenAI';
+                testBtn.style.backgroundColor = '';
+            }, 3000);
+        });
+    }
+
     testInlineSignal() {
         const assets = ['BTCUSDT', 'ETHUSDT', 'XAU/USD', 'EUR/USD'];
         const randomAsset = assets[Math.floor(Math.random() * assets.length)];

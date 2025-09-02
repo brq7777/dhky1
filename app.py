@@ -133,6 +133,35 @@ def get_ai_stats():
         logging.error(f"خطأ في الحصول على إحصائيات AI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/test-openai', methods=['POST'])
+@login_required
+def test_openai_api():
+    """اختبار اتصال OpenAI API"""
+    try:
+        if hasattr(price_service, 'ai_analyzer') and price_service.ai_analyzer:
+            # اختبار اتصال OpenAI
+            test_result = price_service.ai_analyzer.test_openai_connection()
+            return jsonify({'success': True, 'data': test_result})
+        else:
+            return jsonify({
+                'success': False,
+                'data': {
+                    'status': 'error',
+                    'connected': False,
+                    'message': 'نظام الذكاء الاصطناعي غير مفعل'
+                }
+            })
+    except Exception as e:
+        logging.error(f"خطأ في اختبار OpenAI API: {str(e)}")
+        return jsonify({
+            'success': False,
+            'data': {
+                'status': 'error',
+                'connected': False,
+                'message': f'خطأ في الاختبار: {str(e)}'
+            }
+        })
+
 # مسارات المصادقة
 @app.route('/login', methods=['GET', 'POST'])
 def login():
