@@ -624,12 +624,37 @@ class TradingDashboard {
     // وظائف إدارة التصاميم والخلفيات
     initializeThemeSelector() {
         const themeOptions = document.querySelectorAll('.theme-option');
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const themeSelector = document.getElementById('theme-selector');
+        
+        // إعداد الحدث للزر المتحكم في إظهار/إخفاء منتقي التصاميم
+        if (themeToggleBtn && themeSelector) {
+            themeToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = themeSelector.style.display !== 'none';
+                themeSelector.style.display = isVisible ? 'none' : 'block';
+                themeToggleBtn.textContent = isVisible ? '🎨 تغيير التصميم' : '✖ إغلاق';
+            });
+            
+            // إخفاء منتقي التصاميم عند النقر خارجه
+            document.addEventListener('click', (e) => {
+                if (!themeSelector.contains(e.target) && !themeToggleBtn.contains(e.target)) {
+                    themeSelector.style.display = 'none';
+                    themeToggleBtn.textContent = '🎨 تغيير التصميم';
+                }
+            });
+        }
         
         // إعداد الحدث لكل خيار تصميم
         themeOptions.forEach(option => {
             option.addEventListener('click', () => {
                 const theme = option.getAttribute('data-theme');
                 this.changeTheme(theme, option);
+                // إخفاء منتقي التصاميم بعد الاختيار
+                if (themeSelector) {
+                    themeSelector.style.display = 'none';
+                    themeToggleBtn.textContent = '🎨 تغيير التصميم';
+                }
             });
         });
         
