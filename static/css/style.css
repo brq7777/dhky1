@@ -594,10 +594,55 @@ body.theme-light-blue {
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s ease;
+    backdrop-filter: blur(10px);
 }
 
 .card:hover {
     transform: translateY(-2px);
+}
+
+/* تحسين البطاقات للخلفيات المختلفة */
+body.theme-blue-purple .card {
+    background: linear-gradient(135deg, rgba(30, 58, 138, 0.8) 0%, rgba(59, 130, 246, 0.6) 100%);
+    border: 1px solid rgba(147, 197, 253, 0.3);
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.1);
+}
+
+body.theme-green-emerald .card {
+    background: linear-gradient(135deg, rgba(6, 78, 59, 0.8) 0%, rgba(5, 150, 105, 0.6) 100%);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.1);
+}
+
+body.theme-orange-red .card {
+    background: linear-gradient(135deg, rgba(124, 45, 18, 0.8) 0%, rgba(234, 88, 12, 0.6) 100%);
+    border: 1px solid rgba(251, 146, 60, 0.3);
+    box-shadow: 0 8px 32px rgba(249, 115, 22, 0.1);
+}
+
+body.theme-pink-purple .card {
+    background: linear-gradient(135deg, rgba(131, 24, 67, 0.8) 0%, rgba(190, 24, 93, 0.6) 100%);
+    border: 1px solid rgba(251, 113, 133, 0.3);
+    box-shadow: 0 8px 32px rgba(225, 29, 72, 0.1);
+}
+
+body.theme-stars .card,
+body.theme-grid .card {
+    background: linear-gradient(135deg, rgba(15, 15, 15, 0.9) 0%, rgba(31, 41, 55, 0.8) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-geometric .card {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(55, 65, 81, 0.8) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.1);
+}
+
+body.theme-light-blue .card {
+    background: linear-gradient(135deg, rgba(12, 74, 110, 0.8) 0%, rgba(3, 105, 161, 0.6) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    box-shadow: 0 8px 32px rgba(2, 132, 199, 0.1);
 }
 
 .card h4 {
@@ -636,6 +681,36 @@ body.theme-light-blue {
 .asset-row:hover {
     background-color: rgba(255, 255, 255, 0.02);
     border-radius: 6px;
+}
+
+/* تحسين صفوف الأصول للخلفيات المختلفة */
+body.theme-blue-purple .asset-row:hover {
+    background-color: rgba(147, 197, 253, 0.1);
+}
+
+body.theme-green-emerald .asset-row:hover {
+    background-color: rgba(52, 211, 153, 0.1);
+}
+
+body.theme-orange-red .asset-row:hover {
+    background-color: rgba(251, 146, 60, 0.1);
+}
+
+body.theme-pink-purple .asset-row:hover {
+    background-color: rgba(251, 113, 133, 0.1);
+}
+
+body.theme-stars .asset-row:hover,
+body.theme-grid .asset-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+body.theme-geometric .asset-row:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+body.theme-light-blue .asset-row:hover {
+    background-color: rgba(56, 189, 248, 0.1);
 }
 
 .asset-name {
