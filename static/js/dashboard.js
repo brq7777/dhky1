@@ -639,6 +639,7 @@ class TradingDashboard {
                 <span class="signal-type ${signal.type.toLowerCase()}">${signal.type}</span>
                 <span class="signal-asset">${signal.asset_name}</span>
                 <span class="signal-confidence">${signal.confidence}%</span>
+                <span class="signal-countdown">⏰ جاري التحميل...</span>
             </div>
             <div class="signal-details">
                 <div class="signal-price">السعر: ${this.formatPrice(signal.price, signal.asset_id)}</div>
@@ -672,11 +673,7 @@ class TradingDashboard {
         let remaining = seconds;
         let countdown = signalElement.querySelector('.signal-countdown');
         
-        if (!countdown) {
-            countdown = document.createElement('div');
-            countdown.className = 'signal-countdown';
-            signalElement.appendChild(countdown);
-        }
+        if (!countdown) return; // العنصر يجب أن يكون موجوداً مسبقاً
         
         const timer = setInterval(() => {
             remaining--;
@@ -693,7 +690,10 @@ class TradingDashboard {
             if (remaining <= 0) {
                 clearInterval(timer);
                 countdown.textContent = '⌛ انتهى';
-                setTimeout(() => countdown.remove(), 3000);
+                setTimeout(() => {
+                    countdown.textContent = '';
+                    countdown.style.display = 'none';
+                }, 3000);
             }
         }, 1000);
         
