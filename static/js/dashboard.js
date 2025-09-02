@@ -19,6 +19,7 @@ class TradingDashboard {
         this.audioContext = null;
         this.currentAlertAsset = null;
         this.autoRefresh = JSON.parse(localStorage.getItem('autoRefresh') || 'true');
+        this.selectedTheme = localStorage.getItem('selectedTheme') || 'default';
         
         this.init();
     }
@@ -30,6 +31,8 @@ class TradingDashboard {
         this.setupModalHandlers();
         this.fetchInitialPrices();
         this.addSignalsPanel();
+        this.initializeThemeSelector();
+        this.applyTheme(this.selectedTheme);
     }
     
     initializeSocket() {
@@ -616,6 +619,72 @@ class TradingDashboard {
             this.testInlineSignal();
         });
         headerControls.appendChild(testBtn);
+    }
+    
+    // وظائف إدارة التصاميم والخلفيات
+    initializeThemeSelector() {
+        const themeOptions = document.querySelectorAll('.theme-option');
+        
+        // إعداد الحدث لكل خيار تصميم
+        themeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const theme = option.getAttribute('data-theme');
+                this.changeTheme(theme, option);
+            });
+        });
+        
+        // تطبيق التصميم المحفوظ
+        this.updateActiveThemeButton();
+    }
+    
+    changeTheme(theme, clickedOption) {
+        // إزالة الفئة النشطة من جميع الخيارات
+        document.querySelectorAll('.theme-option').forEach(option => {
+            option.classList.remove('active');
+        });
+        
+        // إضافة الفئة النشطة للخيار المحدد
+        clickedOption.classList.add('active');
+        
+        // تطبيق التصميم الجديد
+        this.applyTheme(theme);
+        
+        // حفظ الاختيار
+        this.selectedTheme = theme;
+        localStorage.setItem('selectedTheme', theme);
+        
+        console.log('Theme changed to:', theme);
+    }
+    
+    applyTheme(theme) {
+        // إزالة جميع فئات التصميم السابقة
+        const themeClasses = [
+            'theme-default', 'theme-blue-purple', 'theme-green-emerald',
+            'theme-orange-red', 'theme-pink-purple', 'theme-stars', 
+            'theme-grid', 'theme-geometric', 'theme-light-blue'
+        ];
+        
+        themeClasses.forEach(themeClass => {
+            document.body.classList.remove(themeClass);
+        });
+        
+        // تطبيق التصميم الجديد
+        if (theme !== 'default') {
+            document.body.classList.add(`theme-${theme}`);
+        }
+    }
+    
+    updateActiveThemeButton() {
+        // إزالة الفئة النشطة من جميع الأزرار
+        document.querySelectorAll('.theme-option').forEach(option => {
+            option.classList.remove('active');
+        });
+        
+        // إضافة الفئة النشطة للتصميم المحدد حالياً
+        const activeButton = document.querySelector(`[data-theme="${this.selectedTheme}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
     }
     
     testInlineSignal() {
