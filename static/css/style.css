@@ -460,12 +460,22 @@ body {
 
 .asset-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr 2fr auto;
     align-items: center;
     gap: 15px;
     padding: 12px 0;
     border-bottom: 1px dashed #2c2c2c;
     transition: background-color 0.2s ease;
+}
+
+.asset-row.flash {
+    background-color: rgba(74, 144, 226, 0.1);
+    animation: signalFlash 2s ease-in-out;
+}
+
+@keyframes signalFlash {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.01); opacity: 0.9; }
 }
 
 .asset-row:last-child {
@@ -816,7 +826,7 @@ body {
 }
 
 .signal-badge {
-    display: none;
+    display: inline-block;
     padding: 6px 12px;
     border-radius: 20px;
     font-size: 0.8em;

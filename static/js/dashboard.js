@@ -607,8 +607,33 @@ class TradingDashboard {
     }
     
     addSignalsPanel() {
-        // Signals are now displayed inline with each asset
-        // No separate panel needed
+        // Add test button for debugging
+        const container = document.querySelector('.container');
+        const testBtn = document.createElement('button');
+        testBtn.textContent = 'اختبار إشارة';
+        testBtn.className = 'test-btn';
+        testBtn.style.position = 'fixed';
+        testBtn.style.bottom = '20px';
+        testBtn.style.left = '20px';
+        testBtn.style.zIndex = '1000';
+        testBtn.addEventListener('click', () => {
+            this.testInlineSignal();
+        });
+        container.appendChild(testBtn);
+    }
+    
+    testInlineSignal() {
+        const testSignal = {
+            asset_id: 'BTCUSDT',
+            asset_name: 'BTCUSD', 
+            type: 'BUY',
+            price: 50000,
+            confidence: 95,
+            timestamp: Date.now() / 1000,
+            reason: 'اختبار الإشارة'
+        };
+        console.log('Testing inline signal display');
+        this.displayInlineSignal(testSignal);
     }
     
     handleTradingSignal(signal) {
@@ -637,8 +662,13 @@ class TradingDashboard {
     }
     
     displayInlineSignal(signal) {
+        console.log('Displaying inline signal for:', signal.asset_id, signal);
         const signalArea = document.querySelector(`[data-signal-id="${signal.asset_id}"]`);
-        if (!signalArea) return;
+        
+        if (!signalArea) {
+            console.error('Signal area not found for asset:', signal.asset_id);
+            return;
+        }
         
         // Clear previous signal
         signalArea.innerHTML = '';
@@ -646,9 +676,7 @@ class TradingDashboard {
         // Create signal badge
         const signalBadge = document.createElement('div');
         signalBadge.className = `signal-badge ${signal.type.toLowerCase()}`;
-        signalBadge.innerHTML = `
-            ${signal.type === 'BUY' ? '🟢 شراء' : '🔴 بيع'}
-        `;
+        signalBadge.textContent = signal.type === 'BUY' ? '🟢 شراء' : '🔴 بيع';
         
         // Create confidence indicator
         const confidenceSpan = document.createElement('span');
@@ -664,14 +692,13 @@ class TradingDashboard {
         signalArea.appendChild(confidenceSpan);
         signalArea.appendChild(detailsSpan);
         
-        // Show the signal
-        signalBadge.style.display = 'block';
+        console.log('Signal displayed successfully for:', signal.asset_id);
         
         // Auto-hide after 30 seconds
         setTimeout(() => {
-            signalBadge.style.display = 'none';
-            confidenceSpan.style.display = 'none';
-            detailsSpan.style.display = 'none';
+            if (signalArea.contains(signalBadge)) {
+                signalArea.innerHTML = '';
+            }
         }, 30000);
         
         // Flash the parent row
