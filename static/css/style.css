@@ -460,8 +460,9 @@ body {
 
 .asset-row {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
     align-items: center;
+    gap: 15px;
     padding: 12px 0;
     border-bottom: 1px dashed #2c2c2c;
     transition: background-color 0.2s ease;
@@ -771,27 +772,21 @@ body {
         grid-template-columns: 1fr;
         gap: 10px;
         text-align: center;
+        flex-direction: column;
     }
     
     .asset-actions {
         justify-content: center;
     }
     
+    .asset-signal {
+        justify-content: center;
+        min-width: auto;
+    }
+    
     .modal-content {
         margin: 5% auto;
         width: 95%;
-    }
-    
-    .signal-details {
-        grid-template-columns: 1fr;
-        gap: 5px;
-        text-align: center;
-    }
-    
-    .signal-header {
-        flex-direction: column;
-        gap: 5px;
-        text-align: center;
     }
 }
 
@@ -812,150 +807,54 @@ body {
     margin-left: 8px;
 }
 
-/* Signals Panel Styles */
-.signals-panel {
-    margin-bottom: 30px;
-}
-
-.signals-card {
-    background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-    border: 2px solid #4a90e2;
-    border-radius: 15px;
-    box-shadow: 0 8px 32px rgba(74, 144, 226, 0.2);
-    overflow: hidden;
-}
-
-.signals-card h4 {
-    text-align: center;
-    color: #4a90e2;
-    font-size: 1.4em;
-    margin-bottom: 20px;
-    padding: 15px;
-    background: rgba(74, 144, 226, 0.1);
-    border-bottom: 1px solid rgba(74, 144, 226, 0.2);
-    border-radius: 15px 15px 0 0;
-    margin: -20px -20px 20px -20px;
-}
-
-#signals-list {
-    max-height: 300px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-}
-
-.signal-item {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    padding: 15px;
-    margin-bottom: 10px;
-    border-left: 4px solid;
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.signal-item.buy {
-    border-left-color: #27AE60;
-    background: rgba(39, 174, 96, 0.1);
-}
-
-.signal-item.sell {
-    border-left-color: #E74C3C;
-    background: rgba(231, 76, 60, 0.1);
-}
-
-.signal-item.flash {
-    animation: signalFlash 2s ease-in-out;
-}
-
-@keyframes signalFlash {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.02); opacity: 0.9; }
-}
-
-.signal-header {
+/* Asset Signal Styles */
+.asset-signal {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 200px;
 }
 
-.signal-type {
+.signal-badge {
+    display: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
     font-weight: bold;
-    padding: 4px 12px;
-    border-radius: 15px;
-    font-size: 0.9em;
     color: white;
+    border: 1px solid;
+    animation: signalPulse 2s infinite;
 }
 
-.signal-type.buy {
-    background: #27AE60;
+.signal-badge.buy {
+    background: linear-gradient(135deg, #27AE60 0%, #2ECC71 100%);
+    border-color: #27AE60;
 }
 
-.signal-type.sell {
-    background: #E74C3C;
+.signal-badge.sell {
+    background: linear-gradient(135deg, #E74C3C 0%, #C0392B 100%);
+    border-color: #E74C3C;
 }
 
-.signal-asset {
-    font-weight: bold;
-    color: #fff;
-    font-size: 1.1em;
+.signal-details {
+    font-size: 0.75em;
+    opacity: 0.9;
+    margin-right: 8px;
 }
 
 .signal-confidence {
     background: rgba(255, 255, 255, 0.1);
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.9em;
+    padding: 2px 6px;
+    border-radius: 8px;
     color: #4a90e2;
-}
-
-.signal-details {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    gap: 10px;
-    font-size: 0.9em;
-    opacity: 0.9;
-}
-
-.signal-price {
     font-weight: bold;
-    color: #f39c12;
 }
 
-.signal-reason {
-    color: #bdc3c7;
-    text-align: center;
+@keyframes signalPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
 }
 
-.signal-time {
-    color: #95a5a6;
-    text-align: left;
-    font-size: 0.8em;
-}
-
-.signal-countdown {
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 0.8em;
-    font-weight: bold;
-    margin-left: 8px;
-}
-
-.signal-countdown.green {
-    background: rgba(39, 174, 96, 0.8);
-    color: white;
-}
-
-.signal-countdown.yellow {
-    background: rgba(243, 156, 18, 0.8);
-    color: white;
-}
-
-.signal-countdown.red {
-    background: rgba(231, 76, 60, 0.8);
-    color: white;
-}
 
 .test-btn {
     background: linear-gradient(135deg, #9b59b6, #8e44ad);

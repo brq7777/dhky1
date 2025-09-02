@@ -251,6 +251,11 @@ class TradingDashboard {
             <div class="trend-indicator" data-trend-id="${asset.id}" style="display: none;"></div>
         `;
         
+        // Create signal display area
+        const signalArea = document.createElement('div');
+        signalArea.className = 'asset-signal';
+        signalArea.setAttribute('data-signal-id', asset.id);
+        
         const actions = document.createElement('div');
         actions.className = 'asset-actions';
         
@@ -293,6 +298,7 @@ class TradingDashboard {
         actions.appendChild(alertButtons);
         actions.appendChild(alertBtn);
         row.appendChild(name);
+        row.appendChild(signalArea);
         row.appendChild(actions);
         
         return row;
@@ -601,24 +607,8 @@ class TradingDashboard {
     }
     
     addSignalsPanel() {
-        const container = document.querySelector('.container');
-        const signalsPanel = document.createElement('div');
-        signalsPanel.className = 'signals-panel';
-        signalsPanel.innerHTML = `
-            <div class="card signals-card">
-                <h4>🔔 إشارات الصفقات المباشرة</h4>
-                <div id="signals-list">لا توجد إشارات حتى الآن...</div>
-                <button id="test-signal-btn" class="test-btn">اختبار إشارة</button>
-            </div>
-        `;
-        container.insertBefore(signalsPanel, container.firstChild);
-        
-        // Add test signal button handler
-        document.getElementById('test-signal-btn').addEventListener('click', () => {
-            // Test audio immediately when button is clicked
-            this.playAlertSound({ frequency: 1000, duration: 500 });
-            this.socket.emit('test_signal', { asset_id: 'BTCUSDT' });
-        });
+        // Signals are now displayed inline with each asset
+        // No separate panel needed
     }
     
     handleTradingSignal(signal) {
@@ -627,8 +617,8 @@ class TradingDashboard {
         // Play sound for signal
         this.playAlertSound({ frequency: signal.type === 'BUY' ? 1000 : 600, duration: 300 });
         
-        // Add to signals list
-        this.addSignalToList(signal);
+        // Display signal inline with asset
+        this.displayInlineSignal(signal);
         
         // Enhanced notification with technical indicators
         let technicalDetails = '';
@@ -644,84 +634,56 @@ class TradingDashboard {
                 icon: '/static/favicon.ico'
             });
         }
-        
-        // Start countdown for signal
-        this.startSignalCountdown(signal.asset_id, 60);
     }
     
-    addSignalToList(signal) {
-        const signalsList = document.getElementById('signals-list');
+    displayInlineSignal(signal) {
+        const signalArea = document.querySelector(`[data-signal-id="${signal.asset_id}"]`);
+        if (!signalArea) return;
         
-        // Create signal element
-        const signalElement = document.createElement('div');
-        signalElement.className = `signal-item ${signal.type.toLowerCase()}`;
-        signalElement.setAttribute('data-asset-id', signal.asset_id);
-        signalElement.innerHTML = `
-            <div class="signal-header">
-                <span class="signal-type ${signal.type.toLowerCase()}">${signal.type}</span>
-                <span class="signal-asset">${signal.asset_name}</span>
-                <span class="signal-confidence">${signal.confidence}%</span>
-                <span class="signal-countdown">⏰ جاري التحميل...</span>
-            </div>
-            <div class="signal-details">
-                <div class="signal-price">السعر: ${this.formatPrice(signal.price, signal.asset_id)}</div>
-                <div class="signal-reason">${signal.reason}</div>
-                <div class="signal-time">${new Date(signal.timestamp * 1000).toLocaleTimeString('ar-SA')}</div>
-            </div>
+        // Clear previous signal
+        signalArea.innerHTML = '';
+        
+        // Create signal badge
+        const signalBadge = document.createElement('div');
+        signalBadge.className = `signal-badge ${signal.type.toLowerCase()}`;
+        signalBadge.innerHTML = `
+            ${signal.type === 'BUY' ? '🟢 شراء' : '🔴 بيع'}
         `;
         
-        // Remove "no signals" message if exists
-        if (signalsList.textContent.includes('لا توجد إشارات')) {
-            signalsList.innerHTML = '';
+        // Create confidence indicator
+        const confidenceSpan = document.createElement('span');
+        confidenceSpan.className = 'signal-confidence';
+        confidenceSpan.textContent = `${signal.confidence}%`;
+        
+        // Create details
+        const detailsSpan = document.createElement('span');
+        detailsSpan.className = 'signal-details';
+        detailsSpan.textContent = signal.reason;
+        
+        signalArea.appendChild(signalBadge);
+        signalArea.appendChild(confidenceSpan);
+        signalArea.appendChild(detailsSpan);
+        
+        // Show the signal
+        signalBadge.style.display = 'block';
+        
+        // Auto-hide after 30 seconds
+        setTimeout(() => {
+            signalBadge.style.display = 'none';
+            confidenceSpan.style.display = 'none';
+            detailsSpan.style.display = 'none';
+        }, 30000);
+        
+        // Flash the parent row
+        const assetRow = signalArea.closest('.asset-row');
+        if (assetRow) {
+            assetRow.classList.add('flash');
+            setTimeout(() => {
+                assetRow.classList.remove('flash');
+            }, 2000);
         }
-        
-        // Add to top of list
-        signalsList.insertBefore(signalElement, signalsList.firstChild);
-        
-        // Keep only last 5 signals
-        while (signalsList.children.length > 5) {
-            signalsList.removeChild(signalsList.lastChild);
-        }
-        
-        // Flash animation
-        signalElement.classList.add('flash');
-        setTimeout(() => signalElement.classList.remove('flash'), 2000);
     }
     
-    startSignalCountdown(assetId, seconds = 60) {
-        const signalElement = document.querySelector(`[data-asset-id="${assetId}"]`);
-        if (!signalElement) return;
-        
-        let remaining = seconds;
-        let countdown = signalElement.querySelector('.signal-countdown');
-        
-        if (!countdown) return; // العنصر يجب أن يكون موجوداً مسبقاً
-        
-        const timer = setInterval(() => {
-            remaining--;
-            countdown.textContent = `⏰ ${remaining}ث`;
-            
-            if (remaining > seconds * 0.6) {
-                countdown.className = 'signal-countdown green';
-            } else if (remaining > seconds * 0.3) {
-                countdown.className = 'signal-countdown yellow';
-            } else {
-                countdown.className = 'signal-countdown red';
-            }
-            
-            if (remaining <= 0) {
-                clearInterval(timer);
-                countdown.textContent = '⌛ انتهى';
-                setTimeout(() => {
-                    countdown.textContent = '';
-                    countdown.style.display = 'none';
-                }, 3000);
-            }
-        }, 1000);
-        
-        countdown.textContent = `⏰ ${seconds}ث`;
-        countdown.className = 'signal-countdown green';
-    }
 }
 
 // Initialize dashboard when page loads
