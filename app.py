@@ -120,6 +120,19 @@ def get_system_status():
         logging.error(f"Error fetching system status: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/ai/stats')
+def get_ai_stats():
+    """الحصول على إحصائيات نظام التعلم الذكي"""
+    try:
+        if hasattr(price_service, 'ai_analyzer') and price_service.ai_analyzer:
+            stats = price_service.ai_analyzer.get_ai_learning_stats()
+            return jsonify({'success': True, 'data': stats})
+        else:
+            return jsonify({'success': True, 'data': {'ai_enabled': False, 'message': 'نظام الذكاء الاصطناعي غير متاح'}})
+    except Exception as e:
+        logging.error(f"خطأ في الحصول على إحصائيات AI: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # مسارات المصادقة
 @app.route('/login', methods=['GET', 'POST'])
 def login():

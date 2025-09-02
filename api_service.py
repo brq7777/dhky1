@@ -5,6 +5,10 @@ from typing import Dict, List, Optional
 import time
 import random
 
+# استيراد نظام الذكاء الاصطناعي (معطل مؤقتاً)
+AI_ENABLED = False
+logging.info("نظام الذكاء الاصطناعي معطل مؤقتاً - استخدام النظام التقليدي")
+
 class PriceService:
     def __init__(self):
         self.binance_base_url = "https://api.binance.com/api/v3"
@@ -66,6 +70,9 @@ class PriceService:
         adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20)
         self.session.mount('https://', adapter)
         self.session.mount('http://', adapter)
+        
+        # نظام الذكاء الاصطناعي معطل مؤقتاً
+        self.ai_analyzer = None
         
     def get_binance_price(self, symbol: str) -> Optional[float]:
         """Get price from Binance API with offline mode detection"""
@@ -338,7 +345,7 @@ class PriceService:
         return signals
     
     def generate_trading_signals_fast(self, current_prices: Dict[str, Dict]) -> List[Dict]:
-        """Generate real technical analysis signals based on indicators"""
+        """Generate AI-powered trading signals with learning capabilities"""
         signals = []
         current_time = time.time()
         
@@ -350,6 +357,7 @@ class PriceService:
             if asset_id in self.price_history and len(self.price_history[asset_id]) >= 10:
                 prices = [p['price'] for p in self.price_history[asset_id]]
                 self.trend_analysis[asset_id] = self._analyze_market_trend(asset_id, prices)
+                price_data['trend'] = self.trend_analysis[asset_id].get('trend', 'sideways')
             
             # Only generate signals every 20-30 seconds per asset
             if asset_id in self.last_signal_time:
@@ -357,7 +365,28 @@ class PriceService:
                 if time_since_last < 20:  # Minimum 20 seconds between signals
                     continue
             
-            # Calculate technical indicators and generate signals
+            # استخدام نظام الذكاء الاصطناعي إذا كان متاحاً
+            if self.ai_analyzer:
+                try:
+                    ai_signal = self.ai_analyzer.analyze_market_with_ai(asset_id, price_data)
+                    if ai_signal:
+                        signals.append(ai_signal)
+                        self.last_signal_time[asset_id] = current_time
+                        
+                        # Store in history
+                        if asset_id not in self.signals_history:
+                            self.signals_history[asset_id] = []
+                        self.signals_history[asset_id].append(ai_signal)
+                        
+                        # Keep only last 5 signals per asset for performance
+                        if len(self.signals_history[asset_id]) > 5:
+                            self.signals_history[asset_id] = self.signals_history[asset_id][-5:]
+                        
+                        continue  # استخدم نظام AI فقط
+                except Exception as e:
+                    logging.error(f"خطأ في تحليل AI: {e}")
+            
+            # العودة للنظام التقليدي عند عدم توفر AI
             signal = self._analyze_technical_indicators(asset_id, price_data, current_time)
             
             if signal:
