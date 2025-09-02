@@ -80,7 +80,7 @@ class Subscription(db.Model):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if not self.trial_end:
+        if not self.trial_end and self.trial_start:
             self.trial_end = self.trial_start + timedelta(hours=12)
     
     def is_trial_active(self):
@@ -339,11 +339,11 @@ class TradingSignal(db.Model):
         db.session.commit()
     
     @staticmethod
-    def get_failed_signals_patterns(asset_id: str = None, limit: int = 100):
+    def get_failed_signals_patterns(asset_id = None, limit: int = 100):
         """الحصول على أنماط الإشارات الفاشلة للتعلم منها"""
         query = TradingSignal.query.filter(
             TradingSignal.is_successful == False,
-            TradingSignal.evaluation_time.is_not(None)
+            TradingSignal.evaluation_time != None
         )
         
         if asset_id:
@@ -352,11 +352,11 @@ class TradingSignal(db.Model):
         return query.order_by(TradingSignal.created_at.desc()).limit(limit).all()
     
     @staticmethod
-    def get_successful_signals_patterns(asset_id: str = None, limit: int = 100):
+    def get_successful_signals_patterns(asset_id = None, limit: int = 100):
         """الحصول على أنماط الإشارات الناجحة للتعلم منها"""
         query = TradingSignal.query.filter(
             TradingSignal.is_successful == True,
-            TradingSignal.evaluation_time.is_not(None)
+            TradingSignal.evaluation_time != None
         )
         
         if asset_id:

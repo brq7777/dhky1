@@ -70,8 +70,8 @@ with app.app_context():
         admin_subscription = Subscription()
         admin_subscription.user_id = admin_user.id
         admin_subscription.status = 'active'
-        admin_subscription.subscription_start = datetime.now()
-        admin_subscription.subscription_end = datetime.now() + timedelta(days=365 * 10)  # 10 سنوات
+        admin_subscription.subscription_start = datetime.utcnow()
+        admin_subscription.subscription_end = datetime.utcnow() + timedelta(days=365 * 10)  # 10 سنوات
         
         db.session.add(admin_subscription)
         db.session.commit()
