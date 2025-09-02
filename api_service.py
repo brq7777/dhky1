@@ -61,7 +61,8 @@ class PriceService:
         # Connection optimization - reuse connections for better performance
         self.session = requests.Session()
         # Set connection pool size for better performance
-        adapter = requests.adapters.HTTPAdapter(pool_connections=20, pool_maxsize=20)
+        from requests.adapters import HTTPAdapter
+        adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20)
         self.session.mount('https://', adapter)
         self.session.mount('http://', adapter)
         
@@ -431,7 +432,7 @@ class PriceService:
         
         return ((current_price - old_price) / old_price) * 100
     
-    def _analyze_technical_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Dict:
+    def _analyze_technical_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Optional[Dict]:
         """Analyze technical indicators and generate trading signal"""
         if asset_id not in self.price_history or len(self.price_history[asset_id]) < 10:
             return None  # Need more data for analysis

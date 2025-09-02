@@ -25,7 +25,7 @@ db.init_app(app)
 # إعداد Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'login'  # type: ignore
 login_manager.login_message = 'يرجى تسجيل الدخول للوصول لهذه الصفحة.'
 login_manager.login_message_category = 'info'
 
@@ -198,7 +198,7 @@ def create_stripe_session():
             }
         )
         
-        return redirect(checkout_session.url, code=303)
+        return redirect(checkout_session.url or url_for('subscription'), code=303)
         
     except Exception as e:
         logging.error(f"خطأ في إنشاء جلسة Stripe: {e}")
