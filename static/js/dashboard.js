@@ -607,33 +607,61 @@ class TradingDashboard {
     }
     
     addSignalsPanel() {
-        // Add test button for debugging
-        const container = document.querySelector('.container');
+        // Add test button to header controls
+        const headerControls = document.querySelector('.header-controls .status-indicator');
         const testBtn = document.createElement('button');
-        testBtn.textContent = 'اختبار إشارة';
+        testBtn.textContent = '🔬 اختبار إشارة';
         testBtn.className = 'test-btn';
-        testBtn.style.position = 'fixed';
-        testBtn.style.bottom = '20px';
-        testBtn.style.left = '20px';
-        testBtn.style.zIndex = '1000';
         testBtn.addEventListener('click', () => {
             this.testInlineSignal();
         });
-        container.appendChild(testBtn);
+        headerControls.appendChild(testBtn);
     }
     
     testInlineSignal() {
+        const assets = ['BTCUSDT', 'ETHUSDT', 'XAU/USD', 'EUR/USD'];
+        const randomAsset = assets[Math.floor(Math.random() * assets.length)];
         const testSignal = {
-            asset_id: 'BTCUSDT',
-            asset_name: 'BTCUSD', 
-            type: 'BUY',
+            asset_id: randomAsset,
+            asset_name: randomAsset, 
+            type: Math.random() > 0.5 ? 'BUY' : 'SELL',
             price: 50000,
             confidence: 95,
             timestamp: Date.now() / 1000,
             reason: 'اختبار الإشارة'
         };
-        console.log('Testing inline signal display');
+        console.log('Testing inline signal display for:', randomAsset);
         this.displayInlineSignal(testSignal);
+    }
+    
+    startSignalCountdown(assetId, countdownElement, seconds = 60) {
+        let remaining = seconds;
+        
+        const timer = setInterval(() => {
+            remaining--;
+            countdownElement.textContent = `⏰ ${remaining}ث`;
+            
+            // Change color based on remaining time
+            if (remaining > seconds * 0.6) {
+                countdownElement.className = 'signal-countdown green';
+            } else if (remaining > seconds * 0.3) {
+                countdownElement.className = 'signal-countdown yellow';
+            } else {
+                countdownElement.className = 'signal-countdown red';
+            }
+            
+            if (remaining <= 0) {
+                clearInterval(timer);
+                countdownElement.textContent = '⌛ انتهى';
+                setTimeout(() => {
+                    // Clear the signal after countdown ends
+                    const signalArea = document.querySelector(`[data-signal-id="${assetId}"]`);
+                    if (signalArea) {
+                        signalArea.innerHTML = '';
+                    }
+                }, 3000);
+            }
+        }, 1000);
     }
     
     handleTradingSignal(signal) {
@@ -675,13 +703,18 @@ class TradingDashboard {
         
         // Create signal badge
         const signalBadge = document.createElement('div');
-        signalBadge.className = `signal-badge ${signal.type.toLowerCase()}`;
+        signalBadge.className = `signal-badge active ${signal.type.toLowerCase()}`;
         signalBadge.textContent = signal.type === 'BUY' ? '🟢 شراء' : '🔴 بيع';
         
         // Create confidence indicator
         const confidenceSpan = document.createElement('span');
         confidenceSpan.className = 'signal-confidence';
-        confidenceSpan.textContent = `${signal.confidence}%`;
+        confidenceSpan.textContent = `الثقة: ${signal.confidence}%`;
+        
+        // Create countdown
+        const countdownSpan = document.createElement('span');
+        countdownSpan.className = 'signal-countdown green';
+        countdownSpan.textContent = '⏰ 60ث';
         
         // Create details
         const detailsSpan = document.createElement('span');
@@ -690,16 +723,13 @@ class TradingDashboard {
         
         signalArea.appendChild(signalBadge);
         signalArea.appendChild(confidenceSpan);
+        signalArea.appendChild(countdownSpan);
         signalArea.appendChild(detailsSpan);
         
         console.log('Signal displayed successfully for:', signal.asset_id);
         
-        // Auto-hide after 30 seconds
-        setTimeout(() => {
-            if (signalArea.contains(signalBadge)) {
-                signalArea.innerHTML = '';
-            }
-        }, 30000);
+        // Start countdown
+        this.startSignalCountdown(signal.asset_id, countdownSpan, 60);
         
         // Flash the parent row
         const assetRow = signalArea.closest('.asset-row');

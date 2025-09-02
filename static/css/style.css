@@ -870,17 +870,17 @@ body {
     background: linear-gradient(135deg, #9b59b6, #8e44ad);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 20px;
+    padding: 6px 12px;
+    border-radius: 15px;
     cursor: pointer;
     font-weight: bold;
     transition: all 0.3s ease;
-    width: 100%;
-    margin-top: 10px;
+    font-size: 0.8em;
+    margin-right: 10px;
 }
 
 .test-btn:hover {
     background: linear-gradient(135deg, #8e44ad, #7d3c98);
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(158, 89, 182, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(158, 89, 182, 0.4);
 }
