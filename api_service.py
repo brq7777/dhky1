@@ -75,7 +75,7 @@ class PriceService:
                 'type': asset['type'],
                 'price': current_price,
                 'timestamp': current_time,
-                'trend': self._calculate_trend()
+                'trend': self._calculate_trend(asset_id)
             }
             
             # إنشاء بيانات تاريخية بسيطة
