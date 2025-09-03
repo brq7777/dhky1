@@ -36,6 +36,10 @@ class PriceService:
         # النظام الذكي المتطور للتحليل الفني
         self.smart_analyzer = SmartTechnicalAnalyzer()
         
+        # ذاكرة الاتجاه لكل أصل - منع التغيير العشوائي
+        self.trend_memory = {}
+        self.trend_lock_until = {}
+        
         # البيانات المولدة للنظام
         self.generate_sample_data()
         
@@ -77,10 +81,33 @@ class PriceService:
             # إنشاء بيانات تاريخية بسيطة
             self.historical_data[asset_id] = self._generate_historical_data(current_price)
     
-    def _calculate_trend(self):
-        """حساب الاتجاه العام"""
+    def _calculate_trend(self, asset_id: str):
+        """حساب الاتجاه المستقر - منع التغيير العشوائي"""
+        current_time = time.time()
+        
+        # فحص إذا كان الاتجاه مقفل لهذا الأصل
+        if (asset_id in self.trend_lock_until and 
+            current_time < self.trend_lock_until[asset_id] and 
+            asset_id in self.trend_memory):
+            # إرجاع الاتجاه المحفوظ بدون تغيير
+            return self.trend_memory[asset_id]
+        
+        # قائمة الاتجاهات
         trend_options = ['uptrend', 'downtrend', 'sideways']
-        trend = random.choice(trend_options)
+        
+        # إذا كان هناك اتجاه سابق، أعطه وزن أكبر للاستقرار
+        if asset_id in self.trend_memory:
+            previous_trend = self.trend_memory[asset_id]['trend']
+            # 70% احتمال أن يبقى نفس الاتجاه
+            if random.random() < 0.7:
+                trend = previous_trend
+            else:
+                # 30% احتمال للتغيير لاتجاه آخر
+                other_trends = [t for t in trend_options if t != previous_trend]
+                trend = random.choice(other_trends)
+        else:
+            # أول مرة - اختر عشوائياً
+            trend = random.choice(trend_options)
         
         trend_colors = {
             'uptrend': '#27ae60',
@@ -100,13 +127,23 @@ class PriceService:
             'sideways': '🔍'
         }
         
-        return {
+        # إنشاء بيانات الاتجاه الجديدة
+        trend_data = {
             'trend': trend,
             'trend_ar': trend_arabic.get(trend, 'غير محدد'),
-            'strength': random.randint(0, 100),
+            'strength': random.randint(20, 100),  # قوة أعلى للاستقرار
             'direction': trend_icons.get(trend, '🔍'),
             'color': trend_colors.get(trend, '#95a5a6')
         }
+        
+        # حفظ الاتجاه في الذاكرة
+        self.trend_memory[asset_id] = trend_data
+        
+        # قفل الاتجاه لمدة 30-60 ثانية لمنع التغيير المتكرر
+        lock_duration = random.uniform(30, 60)
+        self.trend_lock_until[asset_id] = current_time + lock_duration
+        
+        return trend_data
     
     def _generate_historical_data(self, current_price, periods=50):
         """توليد بيانات تاريخية للتحليل الفني"""
@@ -150,7 +187,7 @@ class PriceService:
                 
                 self.price_cache[asset_id]['price'] = new_price
                 self.price_cache[asset_id]['timestamp'] = current_time
-                self.price_cache[asset_id]['trend'] = self._calculate_trend()
+                self.price_cache[asset_id]['trend'] = self._calculate_trend(asset_id)
     
     def get_price(self, asset_id: str) -> Optional[Dict[str, Any]]:
         """الحصول على سعر أصل واحد"""
