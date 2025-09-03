@@ -404,6 +404,7 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     """Handle client disconnection with cleanup"""
+    from flask import session
     try:
         # Use Flask-SocketIO session
         client_id = session.get('client_id', 'default')
