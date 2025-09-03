@@ -694,50 +694,78 @@ class PriceService:
         timeframes_aligned = False
         signal_direction_match = False
         
-        # ★ إشارات الشراء - شروط صارمة ومتطابقة تماماً
+        # ═══════════════════════════════════════════
+        # 🎯 ENHANCED SIGNAL GENERATION SYSTEM V2.0
+        # ═══════════════════════════════════════════
+        
+        # ★ إشارات الشراء - نظام محسن ودقيق
         if (overall_trend == 'uptrend' and 
             trend_15m == 'uptrend' and 
             trend_5m == 'uptrend' and 
             entry_signal == 'buy_ready'):
             
-            # التحقق من أن السوق فعلاً صاعد
-            if sma_5m_short > sma_5m_long and rsi_15m > 45 and momentum_5m > 0:
+            # فحص شروط إضافية للتأكد من صحة الإشارة
+            price_above_sma = current_price > sma_5m_short > sma_5m_long
+            rsi_healthy = 35 < rsi_15m < 75
+            momentum_positive = momentum_5m > 0.2
+            volatility_acceptable = volatility < 3.0
+            
+            # حساب قوة الاتجاه الإجمالية
+            trend_strength = 0
+            if price_above_sma: trend_strength += 25
+            if rsi_healthy: trend_strength += 20
+            if momentum_positive: trend_strength += 20
+            if volatility_acceptable: trend_strength += 15
+            
+            # إشارة شراء مؤكدة فقط إذا تحققت الشروط
+            if trend_strength >= 60:
                 timeframes_aligned = True
                 signal_type = 'BUY'
-                signal_strength += 70  # قوة عالية للتطابق المؤكد
-                reasons.append('🔺 تطابق مؤكد - صاعد على جميع الفريمات + زخم إيجابي')
+                signal_strength += trend_strength + 30
+                reasons.append('🔺 إشارة شراء مؤكدة - توافق الفريمات والمؤشرات')
                 
-                # مؤشرات تأكيدية إضافية
-                if 30 < rsi_15m < 70:  # RSI في نطاق صحي
-                    signal_strength += 15
-                    reasons.append(f'RSI صحي: {rsi_15m:.1f}')
-                    
-                if momentum_5m > 0.5:  # زخم قوي
-                    signal_strength += 15
+                # تفاصيل إضافية
+                if rsi_15m > 50:
+                    signal_strength += 10
+                    reasons.append(f'RSI إيجابي: {rsi_15m:.1f}')
+                if momentum_5m > 0.7:
+                    signal_strength += 10
                     reasons.append(f'زخم قوي: +{momentum_5m:.2f}%')
                     
                 signal_direction_match = True
 
-        # ★ إشارات البيع - شروط صارمة ومتطابقة تماماً  
+        # ★ إشارات البيع - نظام محسن ودقيق  
         elif (overall_trend == 'downtrend' and 
               trend_15m == 'downtrend' and 
               trend_5m == 'downtrend' and 
               entry_signal == 'sell_ready'):
             
-            # التحقق من أن السوق فعلاً هابط
-            if sma_5m_short < sma_5m_long and rsi_15m < 55 and momentum_5m < 0:
+            # فحص شروط إضافية للتأكد من صحة الإشارة
+            price_below_sma = current_price < sma_5m_short < sma_5m_long
+            rsi_healthy = 25 < rsi_15m < 65
+            momentum_negative = momentum_5m < -0.2
+            volatility_acceptable = volatility < 3.0
+            
+            # حساب قوة الاتجاه الإجمالية
+            trend_strength = 0
+            if price_below_sma: trend_strength += 25
+            if rsi_healthy: trend_strength += 20
+            if momentum_negative: trend_strength += 20
+            if volatility_acceptable: trend_strength += 15
+            
+            # إشارة بيع مؤكدة فقط إذا تحققت الشروط
+            if trend_strength >= 60:
                 timeframes_aligned = True
                 signal_type = 'SELL'
-                signal_strength += 70  # قوة عالية للتطابق المؤكد
-                reasons.append('🔻 تطابق مؤكد - هابط على جميع الفريمات + زخم سلبي')
+                signal_strength += trend_strength + 30
+                reasons.append('🔻 إشارة بيع مؤكدة - توافق الفريمات والمؤشرات')
                 
-                # مؤشرات تأكيدية إضافية
-                if 30 < rsi_15m < 70:  # RSI في نطاق صحي
-                    signal_strength += 15
-                    reasons.append(f'RSI صحي: {rsi_15m:.1f}')
-                    
-                if momentum_5m < -0.5:  # زخم هابط قوي
-                    signal_strength += 15
+                # تفاصيل إضافية
+                if rsi_15m < 50:
+                    signal_strength += 10
+                    reasons.append(f'RSI سلبي: {rsi_15m:.1f}')
+                if momentum_5m < -0.7:
+                    signal_strength += 10
                     reasons.append(f'زخم هابط: {momentum_5m:.2f}%')
                     
                 signal_direction_match = True
@@ -751,8 +779,12 @@ class PriceService:
         # 🚨 FINAL SIGNAL VALIDATION & GENERATION
         # ═══════════════════════════════════════════
         
-        # التحقق النهائي من جودة الإشارة
-        min_strength = 75  # حد أدنى عالي جداً لضمان الجودة
+        # ═══════════════════════════════════════════
+        # 🎯 ENHANCED FINAL VALIDATION & GENERATION
+        # ═══════════════════════════════════════════
+        
+        # معايير صارمة للجودة
+        min_strength = 85  # رفع الحد الأدنى لضمان جودة أعلى
         
         if (signal_strength >= min_strength and 
             signal_type and 
@@ -760,32 +792,43 @@ class PriceService:
             timeframes_aligned and 
             signal_direction_match):
             
-            confidence = min(95, signal_strength + 10)  # ثقة عالية ولكن واقعية
+            # حساب الثقة بناءً على جودة الإشارة
+            base_confidence = min(92, signal_strength * 0.9)
+            
+            # إضافة مكافآت للشروط الإضافية
+            confidence_bonus = 0
+            if volatility < 2.0: confidence_bonus += 3  # تذبذب منخفض
+            if abs(momentum_5m) > 0.5: confidence_bonus += 3  # زخم قوي
+            if 40 < rsi_15m < 60: confidence_bonus += 2  # RSI متوازن
+            
+            final_confidence = min(95, base_confidence + confidence_bonus)
             
             # تسجيل تفاصيل الإشارة المؤكدة
-            logging.info(f"إشارة مؤكدة {signal_type} لـ {asset_id}: قوة={signal_strength}, ثقة={confidence}%")
+            logging.info(f"✅ إشارة {signal_type} عالية الجودة لـ {asset_id}: قوة={signal_strength}, ثقة={final_confidence}%")
             
             return {
                 'asset_id': asset_id,
                 'asset_name': price_data['name'],
                 'type': signal_type,
                 'price': current_price,
-                'confidence': confidence,
+                'confidence': final_confidence,
                 'timestamp': current_time,
-                'reason': f"تحليل متعدد الفريمات مؤكد - {', '.join(reasons)}",
+                'reason': f"تحليل فني متقدم مؤكد - {', '.join(reasons)}",
                 'rsi': round(rsi_15m, 1),
                 'sma_short': round(sma_5m_short, 2),
                 'sma_long': round(sma_5m_long, 2),
                 'price_change_5': round(momentum_5m, 2),
                 'trend': overall_trend,
-                'volatility': volatility,
+                'volatility': round(volatility, 2),
                 'technical_summary': f"15د: RSI {round(rsi_15m, 1)}, 5د: MA {round(sma_5m_short, 2)}, 1د: دخول {entry_signal}",
                 'validated': True,
-                'multi_timeframe': True
+                'multi_timeframe': True,
+                'enhanced_analysis': True
             }
         
-        # لوغ سبب رفض الإشارة
-        logging.info(f"رفض إشارة {asset_id}: قوة={signal_strength}, متطلب={min_strength}, تطابق={timeframes_aligned}")
+        # لوغ مفصل لسبب رفض الإشارة
+        rejection_details = f"قوة={signal_strength}/{min_strength}, تطابق_فريمات={timeframes_aligned}, توافق_اتجاه={signal_direction_match}"
+        logging.info(f"🔍 رفض إشارة {asset_id}: {rejection_details}")
         
         return None
     

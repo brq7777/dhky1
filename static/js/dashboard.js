@@ -857,7 +857,7 @@ ${data.message}`, 'success');
             asset_name: randomAsset, 
             type: Math.random() > 0.5 ? 'BUY' : 'SELL',
             price: 50000,
-            confidence: 95,
+            confidence: 92,
             timestamp: Date.now() / 1000,
             reason: 'تحليل تلقائي متقدم'
         };
