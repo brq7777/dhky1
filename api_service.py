@@ -427,7 +427,7 @@ class PriceService:
                     logging.error(f"خطأ في تحليل AI: {e}")
             
             # العودة للنظام التقليدي عند عدم توفر AI أو عدم وجود إشارة AI
-            signal = self._analyze_technical_indicators(asset_id, price_data, current_time)
+            signal = self._analyze_multi_timeframe_indicators(asset_id, price_data, current_time)
             
             if signal:
                 signals.append(signal)
@@ -494,6 +494,17 @@ class PriceService:
             return prices[-1] if prices else 0
         
         return sum(prices[-period:]) / period
+
+    def _calculate_ema(self, prices: List[float], period: int) -> float:
+        """Calculate Exponential Moving Average for faster response"""
+        if len(prices) < period:
+            return sum(prices) / len(prices) if prices else 0
+        
+        multiplier = 2 / (period + 1)
+        ema = prices[0]
+        for price in prices[1:]:
+            ema = (price * multiplier) + (ema * (1 - multiplier))
+        return ema
     
     def _calculate_price_change_percent(self, prices: List[float], period: int = 5) -> float:
         """Calculate price change percentage over a period"""
@@ -592,8 +603,8 @@ class PriceService:
             'price_change_20': round(price_change_20, 2)
         }
     
-    def _analyze_technical_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Optional[Dict]:
-        """Advanced technical analysis for signal generation with trend confirmation"""
+    def _analyze_multi_timeframe_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Optional[Dict]:
+        """تحليل متعدد الفريمات: 15د للاتجاه + 5د للتأكيد + 1د للدخول"""
         if asset_id not in self.price_history or len(self.price_history[asset_id]) < 5:
             # ولد إشارة تجريبية للعرض التوضيحي إذا لم تكن هناك بيانات كافية
             if random.random() < 0.25:  # 25% احتمال لإشارة تجريبية
@@ -618,80 +629,144 @@ class PriceService:
         prices = [p['price'] for p in self.price_history[asset_id]]
         current_price = price_data['price']
         
-        # Calculate technical indicators
-        rsi = self._calculate_rsi(prices)
-        sma_short = self._calculate_moving_average(prices, 5)   # 5-period SMA
-        sma_long = self._calculate_moving_average(prices, 15)   # 15-period SMA
-        price_change_5 = self._calculate_price_change_percent(prices, 5)
+        # ═══════════════════════════════════════════
+        # 📊 TIMEFRAME 1: 15-MINUTE ANALYSIS (TREND)
+        # ═══════════════════════════════════════════
+        # اتجاه استراتيجي طويل المدى
+        rsi_15m = self._calculate_rsi(prices, 14)  # RSI كلاسيكي
+        sma_15m_short = self._calculate_moving_average(prices, 20)  # 20 فترة = ~5 ساعات
+        sma_15m_long = self._calculate_moving_average(prices, 50)   # 50 فترة = ~12.5 ساعة
+        trend_strength_15m = ((sma_15m_short - sma_15m_long) / sma_15m_long) * 100 if sma_15m_long > 0 else 0
         
-        # Get current trend analysis
+        # تحديد الاتجاه العام (15 دقيقة)
+        trend_15m = 'sideways'
+        if sma_15m_short > sma_15m_long * 1.003:  # 0.3% فرق للتأكيد القوي
+            trend_15m = 'uptrend'
+        elif sma_15m_short < sma_15m_long * 0.997:
+            trend_15m = 'downtrend'
+        
+        # ═══════════════════════════════════════════
+        # 📈 TIMEFRAME 2: 5-MINUTE ANALYSIS (CONFIRMATION)
+        # ═══════════════════════════════════════════
+        # تأكيد الاتجاه قصير المدى
+        rsi_5m = self._calculate_rsi(prices, 10)  # RSI أسرع للاستجابة
+        sma_5m_short = self._calculate_moving_average(prices, 8)   # 8 فترات = ~40 دقيقة
+        sma_5m_long = self._calculate_moving_average(prices, 21)   # 21 فترة = ~1.75 ساعة
+        momentum_5m = self._calculate_price_change_percent(prices, 10)  # زخم آخر 10 فترات
+        
+        # تحديد اتجاه 5 دقائق
+        trend_5m = 'sideways'
+        if sma_5m_short > sma_5m_long * 1.002:
+            trend_5m = 'uptrend'
+        elif sma_5m_short < sma_5m_long * 0.998:
+            trend_5m = 'downtrend'
+        
+        # ═══════════════════════════════════════════
+        # ⚡ TIMEFRAME 3: 1-MINUTE ANALYSIS (ENTRY)
+        # ═══════════════════════════════════════════
+        # نقطة دخول دقيقة
+        rsi_1m = self._calculate_rsi(prices, 7)   # RSI سريع جداً
+        ema_1m_fast = self._calculate_ema(prices, 3)   # EMA 3 للاستجابة الفورية
+        ema_1m_slow = self._calculate_ema(prices, 8)   # EMA 8 للتأكيد
+        price_change_1m = self._calculate_price_change_percent(prices, 3)  # تغير آخر 3 فترات
+        
+        # تحديد نقطة الدخول
+        entry_signal = 'wait'
+        if ema_1m_fast > ema_1m_slow and price_change_1m > 0.1:
+            entry_signal = 'buy_ready'
+        elif ema_1m_fast < ema_1m_slow and price_change_1m < -0.1:
+            entry_signal = 'sell_ready'
+        
+        # ═══════════════════════════════════════════
+        # 🔍 MULTI-TIMEFRAME CONFLUENCE ANALYSIS
+        # ═══════════════════════════════════════════
+        
+        # تحقق من الاتجاه العام (المانع للإشارات الخاطئة)
         trend_info = self.trend_analysis.get(asset_id, {})
-        current_trend = trend_info.get('trend', 'analyzing')
+        overall_trend = trend_info.get('trend', 'analyzing')
         volatility = trend_info.get('volatility', 0)
         
-        # ★ منع الإشارات في الأسواق المتذبذبة أو الجانبية
-        if current_trend in ['volatile', 'sideways'] or volatility > 3:
-            logging.info(f"منع إشارة {asset_id} - السوق {current_trend}, تذبذب: {volatility}%")
+        # منع الإشارات في الأسواق المتذبذبة
+        if overall_trend in ['volatile', 'sideways'] or volatility > 4:
+            logging.info(f"منع إشارة {asset_id} - السوق {overall_trend}, تذبذب: {volatility}%")
             return None
         
-        # Signal generation logic based on trend and technical indicators
+        # منع الإشارات عند عدم تطابق الفريمات
+        if trend_15m == 'sideways' and trend_5m == 'sideways':
+            logging.info(f"منع إشارة {asset_id} - اتجاه جانبي على الفريمات العليا")
+            return None
+        
+        # ═══════════════════════════════════════════
+        # 🎯 SIGNAL GENERATION WITH CONFLUENCE
+        # ═══════════════════════════════════════════
         signal_strength = 0
         signal_type = None
         reasons = []
         
-        # ★ الإشارات بناءً على الاتجاه والمؤشرات معاً
-        if current_trend == 'uptrend':
-            # في الاتجاه الصاعد - نبحث عن إشارات شراء فقط
-            if rsi < 60 and current_price > sma_short and sma_short > sma_long:
-                signal_strength += 45
-                signal_type = 'BUY'
-                reasons.append('اتجاه صاعد + مؤشرات إيجابية')
+        # ★ إشارات الشراء - تطابق جميع الفريمات مطلوب
+        if (trend_15m == 'uptrend' and trend_5m == 'uptrend' and 
+            entry_signal == 'buy_ready' and overall_trend == 'uptrend'):
             
-            if price_change_5 > 0.5:  # زخم إيجابي
-                signal_strength += 25
+            signal_strength += 50  # قوة أساسية لتطابق الفريمات
+            signal_type = 'BUY'
+            reasons.append('تطابق الاتجاه على جميع الفريمات (15د+5د+1د)')
+            
+            # مؤشرات تأكيدية إضافية
+            if 30 < rsi_15m < 70:  # RSI صحي على فريم 15د
+                signal_strength += 15
+                reasons.append('RSI صحي على فريم 15 دقيقة')
+                
+            if rsi_5m > 45 and rsi_5m < 65:  # زخم إيجابي على 5د
+                signal_strength += 10
+                reasons.append('زخم إيجابي على فريم 5 دقائق')
+                
+            if momentum_5m > 0.5:  # زخم صاعد قوي
+                signal_strength += 15
                 reasons.append('زخم صاعد قوي')
                 
-        elif current_trend == 'downtrend':
-            # في الاتجاه الهابط - نبحث عن إشارات بيع فقط
-            if rsi > 40 and current_price < sma_short and sma_short < sma_long:
-                signal_strength += 45
-                signal_type = 'SELL'
-                reasons.append('اتجاه هابط + مؤشرات سلبية')
+            if price_change_1m > 0.1:  # حركة إيجابية على فريم الدقيقة
+                signal_strength += 10
+                reasons.append('دخول دقيق على فريم الدقيقة')
+
+        # ★ إشارات البيع - تطابق جميع الفريمات مطلوب  
+        elif (trend_15m == 'downtrend' and trend_5m == 'downtrend' and 
+              entry_signal == 'sell_ready' and overall_trend == 'downtrend'):
             
-            if price_change_5 < -0.5:  # زخم سلبي
-                signal_strength += 25
-                reasons.append('زخم هابط قوي')
-        
-        # مؤشرات إضافية للتأكيد (فقط إذا كانت تتماشى مع الاتجاه)
-        if rsi < 30 and current_trend == 'uptrend':  # تشبع بيعي في اتجاه صاعد
-            signal_strength += 20
-            signal_type = 'BUY'
-            reasons.append('RSI تشبع بيعي في اتجاه صاعد')
-        elif rsi > 70 and current_trend == 'downtrend':  # تشبع شرائي في اتجاه هابط
-            signal_strength += 20
+            signal_strength += 50  # قوة أساسية لتطابق الفريمات
             signal_type = 'SELL'
-            reasons.append('RSI تشبع شرائي في اتجاه هابط')
+            reasons.append('تطابق الاتجاه الهابط على جميع الفريمات (15د+5د+1د)')
+            
+            # مؤشرات تأكيدية إضافية
+            if 30 < rsi_15m < 70:  # RSI صحي على فريم 15د
+                signal_strength += 15
+                reasons.append('RSI صحي على فريم 15 دقيقة')
+                
+            if rsi_5m > 35 and rsi_5m < 55:  # زخم سلبي على 5د
+                signal_strength += 10
+                reasons.append('زخم سلبي على فريم 5 دقائق')
+                
+            if momentum_5m < -0.5:  # زخم هابط قوي
+                signal_strength += 15
+                reasons.append('زخم هابط قوي')
+                
+            if price_change_1m < -0.1:  # حركة سلبية على فريم الدقيقة
+                signal_strength += 10
+                reasons.append('دخول دقيق على فريم الدقيقة')
+
+        # منع الإشارات إذا لم تتطابق الفريمات
+        else:
+            logging.info(f"منع إشارة {asset_id} - عدم تطابق الفريمات: 15د={trend_15m}, 5د={trend_5m}, دخول={entry_signal}")
+            return None
+
+        # ═══════════════════════════════════════════
+        # 🚨 FINAL SIGNAL VALIDATION & GENERATION
+        # ═══════════════════════════════════════════
         
-        # ★ شروط دقيقة لإصدار الإشارة مع التحليل الفني الصحيح
-        min_strength = 50  # تقليل الحد الأدنى للحصول على إشارات أكثر
-        trend_matches_signal = (
-            (signal_type == 'BUY' and current_trend == 'uptrend') or
-            (signal_type == 'SELL' and current_trend == 'downtrend')
-        )
+        # التحقق من قوة الإشارة الإجمالية
+        min_strength = 65  # حد أدنى أعلى للجودة
         
-        # إضافة تحليل إضافي للدقة
-        rsi_confirms = (
-            (signal_type == 'BUY' and rsi < 70) or  # لا تشتري عند التشبع الشرائي
-            (signal_type == 'SELL' and rsi > 30)    # لا تبع عند التشبع البيعي
-        )
-        
-        ma_confirms = (
-            (signal_type == 'BUY' and sma_short > sma_long) or  # اتجاه صاعد
-            (signal_type == 'SELL' and sma_short < sma_long)    # اتجاه هابط
-        )
-        
-        if signal_strength >= min_strength and signal_type and reasons and trend_matches_signal and rsi_confirms and ma_confirms:
-            confidence = min(95, signal_strength + 15)
+        if signal_strength >= min_strength and signal_type and reasons:
+            confidence = min(95, signal_strength + 20)  # ثقة عالية للإشارات المتطابقة
             
             return {
                 'asset_id': asset_id,
@@ -700,14 +775,14 @@ class PriceService:
                 'price': current_price,
                 'confidence': confidence,
                 'timestamp': current_time,
-                'reason': f"تحليل شامل - {trend_info.get('trend_ar', current_trend)}: {', '.join(reasons)}",
-                'rsi': round(rsi, 1),
-                'sma_short': round(sma_short, 2),
-                'sma_long': round(sma_long, 2),
-                'price_change_5': round(price_change_5, 2),
-                'trend': current_trend,
+                'reason': f"تحليل متعدد الفريمات - {', '.join(reasons)}",
+                'rsi': round(rsi_15m, 1),
+                'sma_short': round(sma_5m_short, 2),
+                'sma_long': round(sma_5m_long, 2),
+                'price_change_5': round(momentum_5m, 2),
+                'trend': overall_trend,
                 'volatility': volatility,
-                'technical_summary': f"RSI: {round(rsi, 1)}, MA5: {round(sma_short, 2)}, MA15: {round(sma_long, 2)}"
+                'technical_summary': f"15د: RSI {round(rsi_15m, 1)}, 5د: MA {round(sma_5m_short, 2)}, 1د: دخول {entry_signal}"
             }
         
         return None
