@@ -16,3 +16,13 @@ class AITradingAnalyzer:
             'connected': False,
             'message': 'النظام يعمل بالتحليل الفني المستقل'
         }
+    
+    def analyze_market_with_ai(self, asset_id, price_data):
+        # إرجاع فارغ لتجنب الأخطاء
+        return {}
+    
+    def process_chat_message(self, message, price_data):
+        return "النظام يعمل بالتحليل الفني المتطور حالياً"
+    
+    def get_ai_learning_stats(self):
+        return {'ai_enabled': False, 'message': 'النظام يعمل بالتحليل الفني'}
