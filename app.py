@@ -33,15 +33,17 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for maximum stability - fixed configuration
+# Initialize SocketIO for rock-solid stability
 socketio = SocketIO(app, 
                    cors_allowed_origins="*", 
-                   ping_timeout=300,       # Much longer timeout for stability
-                   ping_interval=60,       # Less frequent pings to avoid overload
-                   logger=False,           # Reduce logging overhead
-                   engineio_logger=False,  # Reduce logging overhead
-                   async_mode='threading', # Use threading for better performance
-                   transports=['polling']) # Use only polling for maximum stability
+                   ping_timeout=600,       # 10 minutes timeout - very stable
+                   ping_interval=120,      # 2 minutes ping interval
+                   logger=True,            # Enable logging to debug issues
+                   engineio_logger=True,   # Enable engine logging
+                   async_mode='threading', # Use threading
+                   transports=['polling'], # Only polling for stability
+                   always_connect=True,    # Always try to connect
+                   cookie=False)           # Disable cookies to avoid session issues
 
 # Initialize price service
 price_service = PriceService()
@@ -396,14 +398,39 @@ def logout():
 
 @socketio.on('connect')
 def handle_connect():
-    """Handle client connection"""
-    logging.info('Client connected')
-    emit('connected', {'message': 'Connected to price updates'})
+    """Handle client connection with session management"""
+    from flask import session, request
+    client_id = request.sid
+    logging.info(f'Client connected: {client_id}')
+    
+    # Send immediate confirmation
+    emit('connected', {
+        'message': 'Connected to price updates',
+        'session_id': client_id,
+        'timestamp': time.time()
+    })
+    
+    # Send current system status immediately
+    try:
+        status = price_service.get_system_status()
+        emit('system_status', status)
+    except:
+        pass
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """Handle client disconnection"""
-    logging.info('Client disconnected')
+    """Handle client disconnection with cleanup"""
+    from flask import request
+    client_id = request.sid
+    logging.info(f'Client disconnected: {client_id}')
+    
+    # Clean up any client-specific data
+    try:
+        # Remove any alerts for this client
+        if hasattr(price_service, 'remove_client_alerts'):
+            price_service.remove_client_alerts(client_id)
+    except:
+        pass
 
 @socketio.on('test_connection')
 def handle_test_connection(data):
