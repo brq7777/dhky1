@@ -489,9 +489,10 @@ def price_monitor():
             # Generate trading signals - optimized frequency
             signals = price_service.generate_trading_signals_fast(prices)
             for signal in signals:
-                # تتبع الإشارة الجديدة
+                # تتبع الإشارة الجديدة بالمحاكي
                 try:
-                    trade_id = trades_tracker.track_new_signal(signal)
+                    from trade_simulator import trade_simulator
+                    trade_id = trade_simulator.track_signal(signal)
                     signal['trade_id'] = trade_id  # إضافة معرف التتبع للإشارة
                 except Exception as e:
                     logging.error(f"Error tracking signal: {e}")
@@ -512,17 +513,19 @@ def price_monitor():
 def get_trades_stats():
     """إحصائيات الصفقات الشاملة"""
     try:
-        stats = trades_tracker.get_comprehensive_stats(30)
-        recommendations = trades_tracker.generate_ai_recommendations()
-        daily_performance = trades_tracker.update_daily_performance()
+        # استخدام المحاكي لتوليد بيانات حقيقية
+        from trade_simulator import trade_simulator
+        
+        stats = trade_simulator.get_statistics(30)
+        recommendations = trade_simulator.generate_ai_recommendations()
         
         return jsonify({
             'success': True,
             'stats': stats,
-            'recommendations': recommendations,
-            'daily_performance': daily_performance
+            'recommendations': recommendations
         })
     except Exception as e:
+        logging.error(f"خطأ في جلب الإحصائيات: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
