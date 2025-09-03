@@ -93,10 +93,9 @@ with app.app_context():
         logging.error(f"خطأ في إنشاء المستخدم الافتراضي: {e}")
 
 @app.route('/')
-@login_required
 def index():
     """الصفحة الرئيسية للوحة التحكم - تتطلب تسجيل الدخول فقط"""
-    return render_template('index.html', user=current_user)
+    return render_template('index.html')
 
 @app.route('/api/prices')
 def get_prices():
@@ -243,42 +242,11 @@ def test_signal(asset_id):
         'signal': signal
     })
 
-# مسارات المصادقة
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """صفحة تسجيل الدخول - للمدير فقط"""
-    from flask_login import login_user
-    
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        # التحقق من الإيميل والباسورد المحددين فقط
-        if email == 'brq7787@gmail.com' and password == 'Msken2009':
-            user = User.query.filter_by(email=email).first()
-            if not user:
-                # إنشاء المستخدم إذا لم يكن موجوداً
-                user = User()
-                user.email = email
-                user.set_password(password)
-                user.is_admin = True
-                db.session.add(user)
-                db.session.commit()
-            
-            login_user(user)
-            next_page = request.args.get('next')
-            if next_page:
-                return redirect(next_page)
-            return redirect(url_for('index'))
-        else:
-            flash('الإيميل أو كلمة المرور غير صحيحة', 'error')
-    
-    return render_template('login.html')
+# تم حذف نظام تسجيل الدخول - الوصول مفتوح للجميع
 
 
 
 @app.route('/create-stripe-session', methods=['POST'])
-@login_required
 def create_stripe_session():
     """إنشاء جلسة دفع Stripe"""
     import stripe
@@ -329,7 +297,6 @@ def create_stripe_session():
         return redirect(url_for('subscription'))
 
 @app.route('/payment/success')
-@login_required
 def payment_success():
     """صفحة نجاح الدفع"""
     session_id = request.args.get('session_id')
@@ -388,13 +355,7 @@ def register():
     flash('التسجيل غير متاح. يرجى استخدام الإيميل المخصص لك.', 'info')
     return redirect(url_for('login'))
 
-@app.route('/logout')
-@login_required
-def logout():
-    """تسجيل الخروج"""
-    logout_user()
-    flash('تم تسجيل الخروج بنجاح', 'info')
-    return redirect(url_for('login'))
+# تم حذف نظام تسجيل الخروج
 
 @socketio.on('connect')
 def handle_connect():
