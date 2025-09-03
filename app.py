@@ -134,7 +134,6 @@ def get_ai_stats():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/test-openai', methods=['POST'])
-@login_required
 def test_openai_api():
     """اختبار اتصال OpenAI API"""
     try:
@@ -163,7 +162,6 @@ def test_openai_api():
         })
 
 @app.route('/api/ai-chat', methods=['POST'])
-@login_required
 def ai_chat():
     """دردشة مع الذكاء الاصطناعي للتحليل المالي"""
     try:
