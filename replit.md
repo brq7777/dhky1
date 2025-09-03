@@ -17,7 +17,8 @@ Preferred communication style: Simple, everyday language.
 - ✅ **Multi-Timeframe Analysis**: RSI, MACD, Bollinger Bands, Stochastic, Williams %R
 - ✅ **Trend Stability Control**: Signals only generated with >70% trend stability
 - ✅ **Risk Management**: Automatic stop-loss and take-profit calculations
-- ✅ **Performance Tracking**: Real-time accuracy monitoring and system optimization
+- ✅ **Real Trades Tracking**: Live evaluation system based on actual market price movements
+- ✅ **Performance Analytics**: Real-time win/loss statistics with AI-powered insights
 
 ## System Architecture
 

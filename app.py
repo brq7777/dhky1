@@ -486,16 +486,23 @@ def price_monitor():
                 socketio.emit('alert_triggered', alert)
                 logging.info(f"Alert triggered: {alert}")
             
+            # تحديث الأسعار الحالية للمتتبع الحقيقي
+            try:
+                from real_trades_tracker import real_trades_tracker
+                real_trades_tracker.update_current_prices(prices)
+            except Exception as e:
+                logging.error(f"Error updating prices for tracker: {e}")
+
             # Generate trading signals - optimized frequency
             signals = price_service.generate_trading_signals_fast(prices)
             for signal in signals:
-                # تتبع الإشارة الجديدة بالمحاكي
+                # تتبع الإشارة الحقيقية
                 try:
-                    from trade_simulator import trade_simulator
-                    trade_id = trade_simulator.track_signal(signal)
+                    from real_trades_tracker import real_trades_tracker
+                    trade_id = real_trades_tracker.track_real_signal(signal)
                     signal['trade_id'] = trade_id  # إضافة معرف التتبع للإشارة
                 except Exception as e:
-                    logging.error(f"Error tracking signal: {e}")
+                    logging.error(f"Error tracking real signal: {e}")
                 
                 socketio.emit('trading_signal', signal)
                 logging.info(f"Trading signal: {signal['type']} {signal['asset_name']} at {signal['price']}")
@@ -508,16 +515,15 @@ def price_monitor():
         sleep_time = max(1, 2 - processing_time)  # تحديث كل 1-2 ثانية للسرعة القصوى
         time.sleep(sleep_time)
 
-# API للحصول على إحصائيات الصفقات
+# API للحصول على إحصائيات الصفقات الحقيقية
 @app.route('/api/trades-stats')
 def get_trades_stats():
-    """إحصائيات الصفقات الشاملة"""
+    """إحصائيات الصفقات الحقيقية من السوق"""
     try:
-        # استخدام المحاكي لتوليد بيانات حقيقية
-        from trade_simulator import trade_simulator
+        from real_trades_tracker import real_trades_tracker
         
-        stats = trade_simulator.get_statistics(30)
-        recommendations = trade_simulator.generate_ai_recommendations()
+        stats = real_trades_tracker.get_real_statistics(30)
+        recommendations = real_trades_tracker.generate_real_recommendations()
         
         return jsonify({
             'success': True,
@@ -525,7 +531,7 @@ def get_trades_stats():
             'recommendations': recommendations
         })
     except Exception as e:
-        logging.error(f"خطأ في جلب الإحصائيات: {e}")
+        logging.error(f"خطأ في جلب الإحصائيات الحقيقية: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
