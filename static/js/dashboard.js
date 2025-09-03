@@ -859,7 +859,7 @@ ${data.message}`, 'success');
             price: 50000,
             confidence: 95,
             timestamp: Date.now() / 1000,
-            reason: 'اختبار الإشارة'
+            reason: 'تحليل تلقائي متقدم'
         };
         console.log('Testing inline signal display for:', randomAsset);
         this.displayInlineSignal(testSignal);

@@ -694,49 +694,53 @@ class PriceService:
         timeframes_aligned = False
         signal_direction_match = False
         
-        # ★ إشارات الشراء - شروط صارمة للغاية
+        # ★ إشارات الشراء - شروط صارمة ومتطابقة تماماً
         if (overall_trend == 'uptrend' and 
             trend_15m == 'uptrend' and 
             trend_5m == 'uptrend' and 
             entry_signal == 'buy_ready'):
             
-            timeframes_aligned = True
-            signal_type = 'BUY'
-            signal_strength += 60  # قوة عالية للتطابق الكامل
-            reasons.append('تطابق مثالي - صاعد على جميع الفريمات (15د+5د+1د)')
-            
-            # مؤشرات إضافية للتأكيد
-            if 25 < rsi_15m < 75:  # نطاق RSI صحي
-                signal_strength += 15
-                reasons.append(f'RSI متوازن: {rsi_15m:.1f}')
+            # التحقق من أن السوق فعلاً صاعد
+            if sma_5m_short > sma_5m_long and rsi_15m > 45 and momentum_5m > 0:
+                timeframes_aligned = True
+                signal_type = 'BUY'
+                signal_strength += 70  # قوة عالية للتطابق المؤكد
+                reasons.append('🔺 تطابق مؤكد - صاعد على جميع الفريمات + زخم إيجابي')
                 
-            if momentum_5m > 0.3:  # زخم إيجابي واضح
-                signal_strength += 20
-                reasons.append(f'زخم صاعد: {momentum_5m:.2f}%')
-                
-            signal_direction_match = True
+                # مؤشرات تأكيدية إضافية
+                if 30 < rsi_15m < 70:  # RSI في نطاق صحي
+                    signal_strength += 15
+                    reasons.append(f'RSI صحي: {rsi_15m:.1f}')
+                    
+                if momentum_5m > 0.5:  # زخم قوي
+                    signal_strength += 15
+                    reasons.append(f'زخم قوي: +{momentum_5m:.2f}%')
+                    
+                signal_direction_match = True
 
-        # ★ إشارات البيع - شروط صارمة للغاية  
+        # ★ إشارات البيع - شروط صارمة ومتطابقة تماماً  
         elif (overall_trend == 'downtrend' and 
               trend_15m == 'downtrend' and 
               trend_5m == 'downtrend' and 
               entry_signal == 'sell_ready'):
             
-            timeframes_aligned = True
-            signal_type = 'SELL'
-            signal_strength += 60  # قوة عالية للتطابق الكامل
-            reasons.append('تطابق مثالي - هابط على جميع الفريمات (15د+5د+1د)')
-            
-            # مؤشرات إضافية للتأكيد
-            if 25 < rsi_15m < 75:  # نطاق RSI صحي
-                signal_strength += 15
-                reasons.append(f'RSI متوازن: {rsi_15m:.1f}')
+            # التحقق من أن السوق فعلاً هابط
+            if sma_5m_short < sma_5m_long and rsi_15m < 55 and momentum_5m < 0:
+                timeframes_aligned = True
+                signal_type = 'SELL'
+                signal_strength += 70  # قوة عالية للتطابق المؤكد
+                reasons.append('🔻 تطابق مؤكد - هابط على جميع الفريمات + زخم سلبي')
                 
-            if momentum_5m < -0.3:  # زخم سلبي واضح
-                signal_strength += 20
-                reasons.append(f'زخم هابط: {momentum_5m:.2f}%')
-                
-            signal_direction_match = True
+                # مؤشرات تأكيدية إضافية
+                if 30 < rsi_15m < 70:  # RSI في نطاق صحي
+                    signal_strength += 15
+                    reasons.append(f'RSI صحي: {rsi_15m:.1f}')
+                    
+                if momentum_5m < -0.5:  # زخم هابط قوي
+                    signal_strength += 15
+                    reasons.append(f'زخم هابط: {momentum_5m:.2f}%')
+                    
+                signal_direction_match = True
 
         # رفض الإشارات المتضاربة أو غير المتطابقة
         if not timeframes_aligned or not signal_direction_match:
