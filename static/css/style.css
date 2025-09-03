@@ -768,6 +768,67 @@ body.theme-light-blue .asset-row:hover {
     color: #fff;
 }
 
+/* Inline trend display - NEW SYSTEM */
+.asset-info-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+.trend-inline {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(5px);
+    font-weight: 500;
+}
+
+.trend-inline .trend-icon {
+    font-size: 12px;
+}
+
+.trend-inline .trend-text {
+    font-weight: 600;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.trend-inline.uptrend {
+    background: rgba(39, 174, 96, 0.25);
+    border-color: #27AE60;
+    color: #27AE60;
+}
+
+.trend-inline.downtrend {
+    background: rgba(231, 76, 60, 0.25);
+    border-color: #E74C3C;
+    color: #E74C3C;
+}
+
+.trend-inline.sideways {
+    background: rgba(52, 152, 219, 0.25);
+    border-color: #3498DB;
+    color: #3498DB;
+}
+
+.trend-inline.volatile {
+    background: rgba(255, 107, 53, 0.25);
+    border-color: #FF6B35;
+    color: #FF6B35;
+}
+
+.trend-inline.analyzing {
+    background: rgba(149, 165, 166, 0.25);
+    border-color: #95A5A6;
+    color: #95A5A6;
+}
+
 .trend-indicator {
     display: block !important;
     padding: 8px 12px;

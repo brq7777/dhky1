@@ -235,28 +235,21 @@ class TradingDashboard {
                     }
                     
                     trendElement.innerHTML = `
-                        <div class="trend-main">
-                            <span class="trend-icon" style="color: ${trend.color}">${trend.direction}</span>
-                            <span class="trend-text" style="color: ${trend.color}">${trend.trend_ar}</span>
-                            <span class="trend-strength">${trend.strength}%</span>
-                        </div>
-                        <div class="trend-status ${trendClass}">${statusText}</div>
+                        <span class="trend-icon" style="color: ${trend.color}">${trend.direction}</span>
+                        <span class="trend-text" style="color: ${trend.color}">${trend.trend_ar}</span>
                     `;
-                    trendElement.className = `trend-indicator visible ${trendClass}`;
-                    trendElement.style.borderColor = trend.color;
+                    trendElement.className = `trend-inline ${trendClass}`;
+                    trendElement.style.color = trend.color;
                 } else {
                     trendElement.innerHTML = `
-                        <div class="trend-main">
-                            <span class="trend-icon">🔍</span>
-                            <span class="trend-text">جاري التحليل</span>
-                        </div>
-                        <div class="trend-status analyzing">⏳ تحليل الاتجاه</div>
+                        <span class="trend-icon">🔍</span>
+                        <span class="trend-text">جاري التحليل</span>
                     `;
-                    trendElement.className = 'trend-indicator visible analyzing';
+                    trendElement.className = 'trend-inline analyzing';
                 }
                 
-                // Force display
-                trendElement.style.display = 'block !important';
+                // Force inline display
+                trendElement.style.display = 'inline-flex';
                 trendElement.style.visibility = 'visible';
                 trendElement.style.opacity = '1';
             }
@@ -292,15 +285,14 @@ class TradingDashboard {
         const name = document.createElement('div');
         name.className = 'asset-name';
         name.innerHTML = `
-            <div class="asset-title">${asset.name}</div>
-            <div class="price" data-price-id="${asset.id}">--</div>
-            <div class="trend-indicator visible" data-trend-id="${asset.id}">
-                <div class="trend-main">
+            <div class="asset-info-line">
+                <span class="asset-title">${asset.name}</span>
+                <span class="trend-inline" data-trend-id="${asset.id}">
                     <span class="trend-icon">🔍</span>
                     <span class="trend-text">جاري التحليل</span>
-                </div>
-                <div class="trend-status analyzing">⏳ تحليل الاتجاه</div>
+                </span>
             </div>
+            <div class="price" data-price-id="${asset.id}">--</div>
         `;
         
         // Create signal display area
@@ -827,7 +819,7 @@ ${data.message}`, 'success');
             }
         })
         .catch(error => {
-            console.error('Error testing OpenAI:', error);
+            console.warn('OpenAI test failed:', error.message || error);
             this.showNotification(`❌ خطأ في اختبار OpenAI: ${error.message}`, 'error');
             testBtn.textContent = '❌ خطأ';
             testBtn.style.backgroundColor = '#ef4444';
