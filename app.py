@@ -33,15 +33,15 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for maximum speed and stability
+# Initialize SocketIO for maximum stability - fixed configuration
 socketio = SocketIO(app, 
                    cors_allowed_origins="*", 
-                   ping_timeout=60,        # Optimized timeout
-                   ping_interval=15,       # Faster pings for responsiveness
+                   ping_timeout=300,       # Much longer timeout for stability
+                   ping_interval=60,       # Less frequent pings to avoid overload
                    logger=False,           # Reduce logging overhead
                    engineio_logger=False,  # Reduce logging overhead
                    async_mode='threading', # Use threading for better performance
-                   transports=['polling', 'websocket']) # Enable both for speed
+                   transports=['polling']) # Use only polling for maximum stability
 
 # Initialize price service
 price_service = PriceService()
@@ -490,9 +490,9 @@ def price_monitor():
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        # Optimized sleep time for better performance
+        # Stabilized sleep time for reliable connections
         processing_time = time.time() - start_time
-        sleep_time = max(1, 2 - processing_time)  # Much faster updates (1-2 seconds)
+        sleep_time = max(3, 5 - processing_time)  # Slower but more stable updates (3-5 seconds)
         time.sleep(sleep_time)
 
 # Start background price monitoring
