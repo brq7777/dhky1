@@ -165,13 +165,31 @@ class PriceService:
             logging.info(f"Using {status} price for {asset_id}: {price}")
         
         if price is not None:
+            # Update price history for technical analysis
+            self._update_price_history(asset_id, price, time.time())
+            
+            # Calculate real-time trend analysis
+            trend_data = {
+                'trend': 'analyzing',
+                'trend_ar': 'جاري التحليل',
+                'strength': 0,
+                'direction': '🔍',
+                'color': '#95a5a6',
+                'volatility': 0
+            }
+            
+            if asset_id in self.price_history and len(self.price_history[asset_id]) >= 5:
+                prices_list = [p['price'] for p in self.price_history[asset_id]]
+                trend_data = self._analyze_market_trend(asset_id, prices_list)
+                self.trend_analysis[asset_id] = trend_data
+            
             price_data = {
                 'id': asset_id,
                 'name': asset['name'],
                 'type': asset['type'],
                 'price': price,
                 'timestamp': time.time(),
-                'trend': self.trend_analysis.get(asset_id, {})
+                'trend': trend_data
             }
             self.price_cache[asset_id] = price_data
             return price_data
@@ -538,24 +556,30 @@ class PriceService:
         elif price_change_20 < -2 and rsi < 40:
             trend_signals -= 1
         
-        # تحديد الاتجاه النهائي
+        # تحديد الاتجاه النهائي مع مؤشرات واضحة
         if trend_signals >= 2:
             trend = 'uptrend'
             trend_ar = 'صاعد'
-            direction = '📈'
+            direction = '🔺'
             color = '#27AE60'
             strength = min(trend_signals * 20, 100)
         elif trend_signals <= -2:
             trend = 'downtrend'
-            trend_ar = 'هابط'
-            direction = '📉'
+            trend_ar = 'هابط'  
+            direction = '🔻'
             color = '#E74C3C'
             strength = min(abs(trend_signals) * 20, 100)
+        elif volatility > 3:
+            trend = 'volatile'
+            trend_ar = 'متذبذب'
+            direction = '⚠️'
+            color = '#FF6B35'
+            strength = 20
         else:
             trend = 'sideways'
-            trend_ar = 'متذبذب'
-            direction = '↔️'
-            color = '#F39C12'
+            trend_ar = 'جانبي'
+            direction = '➡️'
+            color = '#3498DB'
             strength = 30
         
         return {
@@ -648,14 +672,25 @@ class PriceService:
             signal_type = 'SELL'
             reasons.append('RSI تشبع شرائي في اتجاه هابط')
         
-        # ★ شروط صارمة لإصدار الإشارة
-        min_strength = 60  # زيادة الحد الأدنى
+        # ★ شروط دقيقة لإصدار الإشارة مع التحليل الفني الصحيح
+        min_strength = 50  # تقليل الحد الأدنى للحصول على إشارات أكثر
         trend_matches_signal = (
             (signal_type == 'BUY' and current_trend == 'uptrend') or
             (signal_type == 'SELL' and current_trend == 'downtrend')
         )
         
-        if signal_strength >= min_strength and signal_type and reasons and trend_matches_signal:
+        # إضافة تحليل إضافي للدقة
+        rsi_confirms = (
+            (signal_type == 'BUY' and rsi < 70) or  # لا تشتري عند التشبع الشرائي
+            (signal_type == 'SELL' and rsi > 30)    # لا تبع عند التشبع البيعي
+        )
+        
+        ma_confirms = (
+            (signal_type == 'BUY' and sma_short > sma_long) or  # اتجاه صاعد
+            (signal_type == 'SELL' and sma_short < sma_long)    # اتجاه هابط
+        )
+        
+        if signal_strength >= min_strength and signal_type and reasons and trend_matches_signal and rsi_confirms and ma_confirms:
             confidence = min(95, signal_strength + 15)
             
             return {
@@ -665,13 +700,14 @@ class PriceService:
                 'price': current_price,
                 'confidence': confidence,
                 'timestamp': current_time,
-                'reason': f"اتجاه {trend_info.get('trend_ar', current_trend)}: {', '.join(reasons)}",
+                'reason': f"تحليل شامل - {trend_info.get('trend_ar', current_trend)}: {', '.join(reasons)}",
                 'rsi': round(rsi, 1),
                 'sma_short': round(sma_short, 2),
                 'sma_long': round(sma_long, 2),
                 'price_change_5': round(price_change_5, 2),
                 'trend': current_trend,
-                'volatility': volatility
+                'volatility': volatility,
+                'technical_summary': f"RSI: {round(rsi, 1)}, MA5: {round(sma_short, 2)}, MA15: {round(sma_long, 2)}"
             }
         
         return None
