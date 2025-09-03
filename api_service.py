@@ -605,25 +605,8 @@ class PriceService:
     
     def _analyze_multi_timeframe_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Optional[Dict]:
         """تحليل متعدد الفريمات: 15د للاتجاه + 5د للتأكيد + 1د للدخول"""
-        if asset_id not in self.price_history or len(self.price_history[asset_id]) < 5:
-            # ولد إشارة تجريبية للعرض التوضيحي إذا لم تكن هناك بيانات كافية
-            if random.random() < 0.25:  # 25% احتمال لإشارة تجريبية
-                signal_type = random.choice(['BUY', 'SELL'])
-                return {
-                    'asset_id': asset_id,
-                    'asset_name': price_data['name'],
-                    'type': signal_type,
-                    'price': price_data['price'],
-                    'confidence': random.randint(75, 90),
-                    'timestamp': current_time,
-                    'reason': f"إشارة تجريبية - {signal_type}",
-                    'rsi': random.randint(30, 70),
-                    'sma_short': price_data['price'] * 0.99,
-                    'sma_long': price_data['price'] * 0.98,
-                    'price_change_5': random.uniform(-2, 2),
-                    'trend': 'uptrend' if signal_type == 'BUY' else 'downtrend',
-                    'volatility': random.uniform(1, 3)
-                }
+        if asset_id not in self.price_history or len(self.price_history[asset_id]) < 20:
+            logging.info(f"بيانات غير كافية للتحليل متعدد الفريمات: {asset_id}")
             return None
         
         prices = [p['price'] for p in self.price_history[asset_id]]
@@ -703,70 +686,80 @@ class PriceService:
         signal_type = None
         reasons = []
         
-        # ★ إشارات الشراء - تطابق جميع الفريمات مطلوب
-        if (trend_15m == 'uptrend' and trend_5m == 'uptrend' and 
-            entry_signal == 'buy_ready' and overall_trend == 'uptrend'):
+        # ═══════════════════════════════════════════
+        # 🎯 STRICT SIGNAL VALIDATION & MATCHING
+        # ═══════════════════════════════════════════
+        
+        # التحقق من التطابق الكامل - شروط صارمة جداً
+        timeframes_aligned = False
+        signal_direction_match = False
+        
+        # ★ إشارات الشراء - شروط صارمة للغاية
+        if (overall_trend == 'uptrend' and 
+            trend_15m == 'uptrend' and 
+            trend_5m == 'uptrend' and 
+            entry_signal == 'buy_ready'):
             
-            signal_strength += 50  # قوة أساسية لتطابق الفريمات
+            timeframes_aligned = True
             signal_type = 'BUY'
-            reasons.append('تطابق الاتجاه على جميع الفريمات (15د+5د+1د)')
+            signal_strength += 60  # قوة عالية للتطابق الكامل
+            reasons.append('تطابق مثالي - صاعد على جميع الفريمات (15د+5د+1د)')
             
-            # مؤشرات تأكيدية إضافية
-            if 30 < rsi_15m < 70:  # RSI صحي على فريم 15د
+            # مؤشرات إضافية للتأكيد
+            if 25 < rsi_15m < 75:  # نطاق RSI صحي
                 signal_strength += 15
-                reasons.append('RSI صحي على فريم 15 دقيقة')
+                reasons.append(f'RSI متوازن: {rsi_15m:.1f}')
                 
-            if rsi_5m > 45 and rsi_5m < 65:  # زخم إيجابي على 5د
-                signal_strength += 10
-                reasons.append('زخم إيجابي على فريم 5 دقائق')
+            if momentum_5m > 0.3:  # زخم إيجابي واضح
+                signal_strength += 20
+                reasons.append(f'زخم صاعد: {momentum_5m:.2f}%')
                 
-            if momentum_5m > 0.5:  # زخم صاعد قوي
-                signal_strength += 15
-                reasons.append('زخم صاعد قوي')
-                
-            if price_change_1m > 0.1:  # حركة إيجابية على فريم الدقيقة
-                signal_strength += 10
-                reasons.append('دخول دقيق على فريم الدقيقة')
+            signal_direction_match = True
 
-        # ★ إشارات البيع - تطابق جميع الفريمات مطلوب  
-        elif (trend_15m == 'downtrend' and trend_5m == 'downtrend' and 
-              entry_signal == 'sell_ready' and overall_trend == 'downtrend'):
+        # ★ إشارات البيع - شروط صارمة للغاية  
+        elif (overall_trend == 'downtrend' and 
+              trend_15m == 'downtrend' and 
+              trend_5m == 'downtrend' and 
+              entry_signal == 'sell_ready'):
             
-            signal_strength += 50  # قوة أساسية لتطابق الفريمات
+            timeframes_aligned = True
             signal_type = 'SELL'
-            reasons.append('تطابق الاتجاه الهابط على جميع الفريمات (15د+5د+1د)')
+            signal_strength += 60  # قوة عالية للتطابق الكامل
+            reasons.append('تطابق مثالي - هابط على جميع الفريمات (15د+5د+1د)')
             
-            # مؤشرات تأكيدية إضافية
-            if 30 < rsi_15m < 70:  # RSI صحي على فريم 15د
+            # مؤشرات إضافية للتأكيد
+            if 25 < rsi_15m < 75:  # نطاق RSI صحي
                 signal_strength += 15
-                reasons.append('RSI صحي على فريم 15 دقيقة')
+                reasons.append(f'RSI متوازن: {rsi_15m:.1f}')
                 
-            if rsi_5m > 35 and rsi_5m < 55:  # زخم سلبي على 5د
-                signal_strength += 10
-                reasons.append('زخم سلبي على فريم 5 دقائق')
+            if momentum_5m < -0.3:  # زخم سلبي واضح
+                signal_strength += 20
+                reasons.append(f'زخم هابط: {momentum_5m:.2f}%')
                 
-            if momentum_5m < -0.5:  # زخم هابط قوي
-                signal_strength += 15
-                reasons.append('زخم هابط قوي')
-                
-            if price_change_1m < -0.1:  # حركة سلبية على فريم الدقيقة
-                signal_strength += 10
-                reasons.append('دخول دقيق على فريم الدقيقة')
+            signal_direction_match = True
 
-        # منع الإشارات إذا لم تتطابق الفريمات
-        else:
-            logging.info(f"منع إشارة {asset_id} - عدم تطابق الفريمات: 15د={trend_15m}, 5د={trend_5m}, دخول={entry_signal}")
+        # رفض الإشارات المتضاربة أو غير المتطابقة
+        if not timeframes_aligned or not signal_direction_match:
+            logging.info(f"رفض إشارة غير متطابقة {asset_id}: عام={overall_trend}, 15د={trend_15m}, 5د={trend_5m}, دخول={entry_signal}")
             return None
 
         # ═══════════════════════════════════════════
         # 🚨 FINAL SIGNAL VALIDATION & GENERATION
         # ═══════════════════════════════════════════
         
-        # التحقق من قوة الإشارة الإجمالية
-        min_strength = 65  # حد أدنى أعلى للجودة
+        # التحقق النهائي من جودة الإشارة
+        min_strength = 75  # حد أدنى عالي جداً لضمان الجودة
         
-        if signal_strength >= min_strength and signal_type and reasons:
-            confidence = min(95, signal_strength + 20)  # ثقة عالية للإشارات المتطابقة
+        if (signal_strength >= min_strength and 
+            signal_type and 
+            reasons and 
+            timeframes_aligned and 
+            signal_direction_match):
+            
+            confidence = min(95, signal_strength + 10)  # ثقة عالية ولكن واقعية
+            
+            # تسجيل تفاصيل الإشارة المؤكدة
+            logging.info(f"إشارة مؤكدة {signal_type} لـ {asset_id}: قوة={signal_strength}, ثقة={confidence}%")
             
             return {
                 'asset_id': asset_id,
@@ -775,15 +768,20 @@ class PriceService:
                 'price': current_price,
                 'confidence': confidence,
                 'timestamp': current_time,
-                'reason': f"تحليل متعدد الفريمات - {', '.join(reasons)}",
+                'reason': f"تحليل متعدد الفريمات مؤكد - {', '.join(reasons)}",
                 'rsi': round(rsi_15m, 1),
                 'sma_short': round(sma_5m_short, 2),
                 'sma_long': round(sma_5m_long, 2),
                 'price_change_5': round(momentum_5m, 2),
                 'trend': overall_trend,
                 'volatility': volatility,
-                'technical_summary': f"15د: RSI {round(rsi_15m, 1)}, 5د: MA {round(sma_5m_short, 2)}, 1د: دخول {entry_signal}"
+                'technical_summary': f"15د: RSI {round(rsi_15m, 1)}, 5د: MA {round(sma_5m_short, 2)}, 1د: دخول {entry_signal}",
+                'validated': True,
+                'multi_timeframe': True
             }
+        
+        # لوغ سبب رفض الإشارة
+        logging.info(f"رفض إشارة {asset_id}: قوة={signal_strength}, متطلب={min_strength}, تطابق={timeframes_aligned}")
         
         return None
     
