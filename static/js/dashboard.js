@@ -283,7 +283,13 @@ class TradingDashboard {
         name.innerHTML = `
             <div class="asset-title">${asset.name}</div>
             <div class="price" data-price-id="${asset.id}">--</div>
-            <div class="trend-indicator" data-trend-id="${asset.id}" style="display: none;"></div>
+            <div class="trend-indicator visible" data-trend-id="${asset.id}">
+                <div class="trend-main">
+                    <span class="trend-icon">🔍</span>
+                    <span class="trend-text">جاري التحليل</span>
+                </div>
+                <div class="trend-status analyzing">⏳ تحليل الاتجاه</div>
+            </div>
         `;
         
         // Create signal display area
