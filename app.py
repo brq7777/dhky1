@@ -444,48 +444,69 @@ def handle_subscribe_alert(data):
     })
 
 def price_monitor():
-    """Background task to monitor prices and send updates - optimized for speed"""
-    last_system_status_update = 0
+    """Background task to monitor prices and send updates - محسن للأداء العالي مع عدة صفحات"""
+    last_prices_hash = None
+    last_status_time = 0
+    connected_clients = 0
+    
     while True:
         start_time = time.time()
         try:
-            # Get current prices - optimized call
-            prices = price_service.get_all_prices_fast()
+            # فحص عدد العملاء المتصلين
+            try:
+                connected_clients = len(socketio.server.manager.get_participants('/', '/'))
+            except:
+                connected_clients = 1  # افتراض عميل واحد في حالة الخطأ
             
-            # Emit updates much less frequently to reduce network load
+            # إذا لا يوجد عملاء متصلين، توقف مؤقتاً لتوفير الموارد
+            if connected_clients == 0:
+                time.sleep(10)
+                continue
+            
+            # الحصول على الأسعار الحالية
+            prices = price_service.get_all_prices()
+            
             if prices:
-                # Only send updates every few cycles to avoid overwhelming the connection
-                if hasattr(price_monitor, 'cycle_count'):
-                    price_monitor.cycle_count += 1
-                else:
-                    price_monitor.cycle_count = 1
+                # فحص إذا تغيرت الأسعار فعلاً لتجنب الإرسال المتكرر
+                current_prices_hash = hash(str(sorted(prices.items())))
                 
-                # إرسال تحديثات الأسعار فورياً بدون تأخير
-                socketio.emit('price_update', prices)
+                # إرسال الأسعار فقط عند التغيير الفعلي
+                if current_prices_hash != last_prices_hash:
+                    socketio.emit('price_update', prices)
+                    last_prices_hash = current_prices_hash
                 
-                # إرسال حالة النظام كل دورتين (كل 3-6 ثوان)
-                if price_monitor.cycle_count % 2 == 0:
+                # إرسال حالة النظام كل 8 ثواني لتقليل الحمولة
+                current_time = time.time()
+                if current_time - last_status_time > 8:
                     status = price_service.get_system_status()
+                    status['connected_clients'] = connected_clients
                     socketio.emit('system_status', status)
+                    last_status_time = current_time
             
-            # Check for triggered alerts - optimized
-            triggered_alerts = price_service.check_alerts_fast(prices)
-            for alert in triggered_alerts:
-                socketio.emit('alert_triggered', alert)
-                logging.info(f"Alert triggered: {alert}")
-            
-            # Generate trading signals - optimized frequency
-            signals = price_service.generate_trading_signals_fast(prices)
-            for signal in signals:
-                socketio.emit('trading_signal', signal)
-                logging.info(f"Trading signal: {signal['type']} {signal['asset_name']} at {signal['price']}")
+            # فحص التنبيهات والإشارات
+            try:
+                # فحص الإشارات الجديدة فقط
+                signals = price_service.smart_analyzer.get_active_signals()
+                for signal in signals:
+                    socketio.emit('trading_signal', signal)
+                    logging.info(f"Trading signal: {signal['type']} {signal['asset_id']} at {signal['price']}")
+            except:
+                pass  # تجاهل أخطاء الإشارات للحفاظ على الاستقرار
             
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        # تحديث فوري للبيانات الحية
+        # تحسين التوقيت حسب عدد العملاء المتصلين
         processing_time = time.time() - start_time
-        sleep_time = max(1, 2 - processing_time)  # تحديث كل 1-2 ثانية للسرعة القصوى
+        
+        # تقليل التكرار مع عدة عملاء لتوفير الموارد
+        if connected_clients <= 2:
+            sleep_time = max(1.5, 2.5 - processing_time)  # سريع مع عميل واحد
+        elif connected_clients <= 5:
+            sleep_time = max(2, 3 - processing_time)      # متوسط مع عدة عملاء
+        else:
+            sleep_time = max(3, 4 - processing_time)      # بطيء مع عملاء كثر
+        
         time.sleep(sleep_time)
 
 # Start background price monitoring
