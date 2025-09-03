@@ -473,6 +473,7 @@ def handle_subscribe_alert(data):
 def price_monitor():
     """Background task to monitor prices and send updates - optimized for speed"""
     last_system_status_update = 0
+    cycle_count = 0  # Initialize cycle_count as local variable
     while True:
         start_time = time.time()
         try:
@@ -482,12 +483,7 @@ def price_monitor():
             # Emit updates much less frequently to reduce network load
             if prices:
                 # Only send updates every few cycles to avoid overwhelming the connection
-                # Use a global variable instead of function attribute
-                global cycle_count
-                try:
-                    cycle_count += 1
-                except NameError:
-                    cycle_count = 1
+                cycle_count += 1
                 
                 # إرسال تحديثات الأسعار فورياً بدون تأخير
                 socketio.emit('price_update', prices)
