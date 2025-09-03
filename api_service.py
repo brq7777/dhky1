@@ -8,6 +8,14 @@ import requests
 import random
 from advanced_technical_analysis import SmartTechnicalAnalyzer, MarketState
 
+try:
+    from market_ai_engine import analyze_asset_with_ai
+    AI_ENABLED = True
+    logging.info("🤖 نظام الذكاء الاصطناعي المتطور مفعل")
+except ImportError:
+    AI_ENABLED = False
+    logging.warning("⚠️ نظام الذكاء الاصطناعي غير متوفر")
+
 class PriceService:
     """خدمة متقدمة لمراقبة أسعار الأصول المالية - بدون ذكاء اصطناعي"""
     
@@ -35,6 +43,11 @@ class PriceService:
         
         # النظام الذكي المتطور للتحليل الفني
         self.smart_analyzer = SmartTechnicalAnalyzer()
+        
+        # تفعيل الذكاء الاصطناعي إذا كان متوفراً
+        self.ai_enabled = AI_ENABLED
+        if self.ai_enabled:
+            logging.info("🧠 الذكاء الاصطناعي المتطور جاهز للعمل")
         
         # ذاكرة الاتجاه لكل أصل - منع التغيير العشوائي
         self.trend_memory = {}

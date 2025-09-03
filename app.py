@@ -7,6 +7,7 @@ from flask_login import LoginManager, login_required, logout_user, current_user
 import threading
 import time
 from api_service import PriceService
+from market_ai_engine import analyze_asset_with_ai, get_ai_engine_status
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -118,6 +119,16 @@ def get_price(asset_id):
             return jsonify({'success': False, 'error': 'Asset not found'}), 404
     except Exception as e:
         logging.error(f"Error fetching price for {asset_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/ai-status')
+def get_ai_status():
+    """Get AI engine status"""
+    try:
+        ai_status = get_ai_engine_status()
+        return jsonify({'success': True, 'data': ai_status})
+    except Exception as e:
+        logging.error(f"Error getting AI status: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/status')

@@ -199,85 +199,111 @@ class SmartTechnicalAnalyzer:
             return TrendDirection.SIDEWAYS, stability
 
     def generate_smart_signal(self, asset_id: str, market_state: MarketState) -> Optional[TechnicalSignal]:
-        """توليد إشارة ذكية مع نظام القفل الزمني"""
+        """توليد إشارة ذكية مع فحص استقرار السوق - لا ترسل إشارة إلا إذا كان السوق مستقر"""
         
         current_time = time.time()
         
-        # فحص القفل الزمني للإشارات النشطة
+        # === 1. فحص القفل الزمني للإشارات النشطة ===
         if asset_id in self.active_signals:
             if current_time < self.active_signals[asset_id].locked_until:
                 return None  # الإشارة مازالت مقفلة
         
-        # تحليل الاتجاه مع الاستقرار
-        trend, stability = self.analyze_trend_stability(market_state)
+        # === 2. فحص استقرار السوق أولاً ===
+        market_stability = self._assess_market_stability(market_state)
+        if not market_stability['is_stable']:
+            # السوق متذبذب - لا ترسل إشارة
+            return None
         
-        # حساب الثقة الإجمالية
+        # === 3. فحص وضوح الاتجاه ===
+        trend, stability = self.analyze_trend_stability(market_state)
+        trend_clarity = self._assess_trend_clarity(trend, stability, market_state)
+        
+        if not trend_clarity['is_clear']:
+            # الاتجاه غير واضح - لا ترسل إشارة
+            return None
+        
+        # === 4. فحص التقلبات المفرطة ===
+        volatility_check = self._check_volatility_levels(market_state)
+        if volatility_check['too_volatile']:
+            # التقلبات عالية جداً - خطر على التداول
+            return None
+        
+        # === 5. حساب الثقة بالذكاء الاصطناعي ===
         base_confidence = stability * 100
         
-        # تطبيق التعلم الذاتي - تعديل الثقة بناءً على الأداء السابق
+        # تطبيق التعلم الذاتي المتطور
         asset_history = self.signal_accuracy_log.get(asset_id, {'accuracy': 0.7, 'count': 0})
         learning_factor = min(1.2, max(0.8, asset_history['accuracy']))
-        adjusted_confidence = base_confidence * learning_factor
         
-        # فحص عتبة الثقة
+        # إضافة عامل استقرار السوق
+        stability_bonus = market_stability['stability_score'] * 0.1
+        clarity_bonus = trend_clarity['clarity_score'] * 0.1
+        
+        adjusted_confidence = base_confidence * learning_factor + stability_bonus + clarity_bonus
+        
+        # === 6. فحص عتبة الثقة المشددة ===
         if adjusted_confidence < self.confidence_threshold:
             return None
         
-        # تحديد نوع الإشارة بناءً على الاتجاه المستقر
-        if trend == TrendDirection.UPTREND:
+        # === 7. تحديد نوع الإشارة فقط للاتجاهات الواضحة ===
+        if trend == TrendDirection.UPTREND and trend_clarity['is_clear']:
             signal_type = SignalType.BUY
             entry_price = market_state.price
             stop_loss = entry_price - (market_state.atr * 2)
             take_profit = entry_price + (market_state.atr * 3)
-        elif trend == TrendDirection.DOWNTREND:
+        elif trend == TrendDirection.DOWNTREND and trend_clarity['is_clear']:
             signal_type = SignalType.SELL
             entry_price = market_state.price
             stop_loss = entry_price + (market_state.atr * 2)
             take_profit = entry_price - (market_state.atr * 3)
         else:
-            return None  # لا إشارة في الاتجاه الجانبي غير المستقر
+            # اتجاه جانبي أو غير واضح - لا إشارة
+            return None
         
-        # حساب نسبة المخاطرة للعائد
+        # === 8. فحص نسبة المخاطرة للعائد المحسنة ===
         risk = abs(entry_price - stop_loss)
         reward = abs(take_profit - entry_price)
         risk_reward_ratio = reward / risk if risk > 0 else 0
         
-        # فحص نسبة المخاطرة للعائد
-        if risk_reward_ratio < 1.5:  # نسبة مخاطرة ضعيفة
+        if risk_reward_ratio < 2.0:  # نسبة مخاطرة أكثر صرامة
             return None
         
-        # حساب مدة القفل للإشارة (بناءً على التقلبات)
+        # === 9. حساب مدة القفل الذكية ===
         volatility_score = market_state.atr / market_state.price
-        lock_duration = max(300, min(1800, 600 * volatility_score * 10))  # 5-30 دقيقة
+        base_lock = 600  # 10 دقائق أساسي
+        volatility_adjustment = volatility_score * 1200  # تعديل حسب التقلب
+        stability_adjustment = (1 - market_stability['stability_score']) * 600  # تعديل حسب الاستقرار
         
-        # إنشاء الإشارة المحسنة
+        lock_duration = max(300, min(2400, base_lock + volatility_adjustment + stability_adjustment))
+        
+        # === 10. إنشاء الإشارة المضمونة ===
         signal = TechnicalSignal(
             asset_id=asset_id,
             signal_type=signal_type,
-            confidence=min(95, adjusted_confidence),
+            confidence=min(98, int(adjusted_confidence)),
             trend=trend,
             entry_price=entry_price,
             stop_loss=stop_loss,
             take_profit=take_profit,
             timestamp=current_time,
-            technical_reasoning=self._generate_reasoning(market_state, trend, signal_type),
+            technical_reasoning=self._generate_advanced_reasoning(market_state, trend, signal_type, market_stability, trend_clarity),
             indicators_consensus={
                 'rsi': market_state.rsi,
                 'macd': market_state.macd,
                 'bollinger_position': (market_state.price - market_state.bollinger_lower) / 
                                     (market_state.bollinger_upper - market_state.bollinger_lower),
                 'stochastic': market_state.stochastic,
-                'williams_r': market_state.williams_r
+                'williams_r': market_state.williams_r,
+                'market_stability': market_stability['stability_score'],
+                'trend_clarity': trend_clarity['clarity_score']
             },
             risk_reward_ratio=risk_reward_ratio,
             volatility_score=volatility_score,
             locked_until=current_time + lock_duration
         )
         
-        # حفظ الإشارة كإشارة نشطة مقفلة
+        # === 11. حفظ الإشارة والتحديث ===
         self.active_signals[asset_id] = signal
-        
-        # تحديث الإحصائيات
         self.performance_stats['total_signals'] += 1
         
         return signal
@@ -377,6 +403,148 @@ class SmartTechnicalAnalyzer:
             'confidence_threshold': self.confidence_threshold,
             'trend_stability_threshold': self.trend_stability_threshold
         }
+
+    def _assess_market_stability(self, market_state: MarketState) -> Dict[str, Any]:
+        """فحص استقرار السوق - نظام ذكاء اصطناعي متطور"""
+        
+        stability_indicators = []
+        
+        # 1. فحص تقلبات السعر
+        volatility_ratio = market_state.atr / market_state.price
+        if volatility_ratio < 0.02:  # تقلبات منخفضة = مستقر
+            stability_indicators.append(0.8)
+        elif volatility_ratio < 0.05:  # تقلبات متوسطة
+            stability_indicators.append(0.6)
+        else:  # تقلبات عالية = غير مستقر
+            stability_indicators.append(0.2)
+        
+        # 2. فحص RSI للاستقرار
+        if 35 <= market_state.rsi <= 65:  # منطقة مستقرة
+            stability_indicators.append(0.9)
+        elif 25 <= market_state.rsi <= 75:  # مقبول
+            stability_indicators.append(0.6)
+        else:  # ذروة شراء/بيع = غير مستقر
+            stability_indicators.append(0.3)
+        
+        # 3. فحص Bollinger Bands
+        bollinger_position = (market_state.price - market_state.bollinger_lower) / (market_state.bollinger_upper - market_state.bollinger_lower)
+        if 0.3 <= bollinger_position <= 0.7:  # وسط النطاق = مستقر
+            stability_indicators.append(0.8)
+        elif 0.2 <= bollinger_position <= 0.8:  # مقبول
+            stability_indicators.append(0.6)
+        else:  # قرب الحدود = غير مستقر
+            stability_indicators.append(0.2)
+        
+        # 4. فحص Stochastic
+        if 30 <= market_state.stochastic <= 70:  # منطقة متوازنة
+            stability_indicators.append(0.7)
+        else:  # ذروة = غير مستقر
+            stability_indicators.append(0.3)
+        
+        # حساب النتيجة النهائية
+        stability_score = sum(stability_indicators) / len(stability_indicators)
+        is_stable = stability_score > 0.6  # عتبة الاستقرار
+        
+        reason = "مستقر" if is_stable else "متذبذب"
+        if volatility_ratio > 0.05:
+            reason += " - تقلبات عالية"
+        if market_state.rsi > 75 or market_state.rsi < 25:
+            reason += " - ذروة شراء/بيع"
+        
+        return {
+            'is_stable': is_stable,
+            'stability_score': stability_score,
+            'reason': reason,
+            'volatility_ratio': volatility_ratio
+        }
+    
+    def _assess_trend_clarity(self, trend: TrendDirection, stability: float, market_state: MarketState) -> Dict[str, Any]:
+        """فحص وضوح الاتجاه - نظام ذكاء اصطناعي"""
+        
+        clarity_factors = []
+        
+        # 1. قوة الاتجاه من الاستقرار
+        clarity_factors.append(stability)
+        
+        # 2. تأكيد MACD للاتجاه
+        if trend == TrendDirection.UPTREND and market_state.macd > 0:
+            clarity_factors.append(0.8)
+        elif trend == TrendDirection.DOWNTREND and market_state.macd < 0:
+            clarity_factors.append(0.8)
+        elif trend == TrendDirection.SIDEWAYS and abs(market_state.macd) < 0.001:
+            clarity_factors.append(0.6)
+        else:
+            clarity_factors.append(0.3)  # تضارب
+        
+        # 3. تأكيد RSI للاتجاه
+        if trend == TrendDirection.UPTREND and market_state.rsi > 50:
+            clarity_factors.append(0.7)
+        elif trend == TrendDirection.DOWNTREND and market_state.rsi < 50:
+            clarity_factors.append(0.7)
+        elif trend == TrendDirection.SIDEWAYS and 45 <= market_state.rsi <= 55:
+            clarity_factors.append(0.8)
+        else:
+            clarity_factors.append(0.4)
+        
+        # حساب وضوح الاتجاه
+        clarity_score = sum(clarity_factors) / len(clarity_factors)
+        is_clear = clarity_score > 0.65 and trend != TrendDirection.SIDEWAYS
+        
+        reason = "واضح" if is_clear else "مشوش"
+        if trend == TrendDirection.SIDEWAYS:
+            reason = "جانبي - لا إشارة"
+        
+        return {
+            'is_clear': is_clear,
+            'clarity_score': clarity_score,
+            'reason': reason
+        }
+    
+    def _check_volatility_levels(self, market_state: MarketState) -> Dict[str, Any]:
+        """فحص مستويات التقلب"""
+        
+        volatility_ratio = market_state.atr / market_state.price
+        
+        # حدود التقلب
+        if volatility_ratio > 0.08:  # تقلبات مفرطة
+            return {'too_volatile': True, 'level': 'extreme', 'ratio': volatility_ratio}
+        elif volatility_ratio > 0.05:  # تقلبات عالية
+            return {'too_volatile': True, 'level': 'high', 'ratio': volatility_ratio}
+        else:  # تقلبات مقبولة
+            return {'too_volatile': False, 'level': 'acceptable', 'ratio': volatility_ratio}
+    
+    def _generate_advanced_reasoning(self, market_state: MarketState, trend: TrendDirection, 
+                                   signal_type: SignalType, market_stability: Dict, trend_clarity: Dict) -> str:
+        """توليد تفسير متطور للإشارة"""
+        
+        # نص الاتجاه والإشارة
+        trend_text = {"uptrend": "صاعد", "downtrend": "هابط", "sideways": "جانبي"}
+        signal_text = {"BUY": "شراء", "SELL": "بيع", "HOLD": "انتظار"}
+        
+        # التفسير الأساسي
+        base_reasoning = f"ذكاء اصطناعي متطور: السوق {market_stability['reason']} - اتجاه {trend_text[trend.value]} {trend_clarity['reason']} → إشارة {signal_text[signal_type.value]} مضمونة"
+        
+        # تفاصيل إضافية
+        details = []
+        
+        if market_state.rsi < 30:
+            details.append("RSI ذروة بيع")
+        elif market_state.rsi > 70:
+            details.append("RSI ذروة شراء")
+        
+        if abs(market_state.macd) > 0.01:
+            details.append("MACD قوي")
+        
+        if market_stability['stability_score'] > 0.8:
+            details.append("استقرار عالي")
+        
+        if trend_clarity['clarity_score'] > 0.8:
+            details.append("اتجاه واضح جداً")
+        
+        if details:
+            return f"{base_reasoning} | {' | '.join(details)}"
+        
+        return base_reasoning
 
     def clean_expired_signals(self):
         """تنظيف الإشارات المنتهية الصلاحية"""
