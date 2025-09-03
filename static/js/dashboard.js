@@ -1200,6 +1200,11 @@ class TradingDashboard {
                 this.displayTradesStats(data.stats);
                 this.displayLearningInsights(data.recommendations);
                 this.displayRecommendations(data.recommendations);
+                
+                // عرض معلومات الذكاء الاصطناعي
+                if (data.ai_performance) {
+                    this.displayAIPerformance(data.ai_performance);
+                }
             }
         } catch (error) {
             console.log('Error fetching trades statistics:', error);
@@ -1251,6 +1256,46 @@ class TradingDashboard {
             } else {
                 recommendationsContainer.innerHTML = '<div class="recommendation-loading">جاري إعداد التوصيات...</div>';
             }
+        }
+    }
+    
+    displayAIPerformance(aiData) {
+        console.log('🧠 عرض أداء الذكاء الاصطناعي:', aiData);
+        
+        // عرض حالة الذكاء الاصطناعي
+        const aiStatusElement = document.getElementById('ai-status');
+        if (aiStatusElement) {
+            const status = aiData.ai_status === 'optimized' ? 'محسن ومُدرّب' : 'جاري التعلم';
+            const statusIcon = aiData.ai_status === 'optimized' ? '🧠✨' : '🧠📚';
+            aiStatusElement.innerHTML = `${statusIcon} ${status}`;
+        }
+        
+        // عرض معدل نجاح الأنماط
+        const patternSuccessElement = document.getElementById('pattern-success-rate');
+        if (patternSuccessElement && aiData.performance_metrics) {
+            const rate = aiData.performance_metrics.pattern_success_rate || 0;
+            patternSuccessElement.textContent = `${rate}%`;
+        }
+        
+        // عرض إجمالي الإشارات المحللة
+        const analyzedSignalsElement = document.getElementById('analyzed-signals');
+        if (analyzedSignalsElement && aiData.learning_progress) {
+            const count = aiData.learning_progress.total_signals_analyzed || 0;
+            analyzedSignalsElement.textContent = count;
+        }
+        
+        // عرض الأنماط المكتشفة
+        const patternsElement = document.getElementById('discovered-patterns');
+        if (patternsElement && aiData.learning_progress) {
+            const patterns = aiData.learning_progress.patterns_discovered || 0;
+            patternsElement.textContent = patterns;
+        }
+        
+        // عرض ثقة الذكاء الاصطناعي
+        const aiConfidenceElement = document.getElementById('ai-confidence');
+        if (aiConfidenceElement && aiData.performance_metrics) {
+            const confidence = aiData.performance_metrics.ai_confidence_avg || 0;
+            aiConfidenceElement.textContent = `${Math.round(confidence)}%`;
         }
     }
 }

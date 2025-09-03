@@ -493,19 +493,59 @@ def price_monitor():
             except Exception as e:
                 logging.error(f"Error updating prices for tracker: {e}")
 
-            # Generate trading signals - optimized frequency
-            signals = price_service.generate_trading_signals_fast(prices)
-            for signal in signals:
-                # تتبع الإشارة الحقيقية
-                try:
-                    from real_trades_tracker import real_trades_tracker
-                    trade_id = real_trades_tracker.track_real_signal(signal)
-                    signal['trade_id'] = trade_id  # إضافة معرف التتبع للإشارة
-                except Exception as e:
-                    logging.error(f"Error tracking real signal: {e}")
+            # Generate trading signals with AI optimization
+            raw_signals = price_service.generate_trading_signals_fast(prices)
+            
+            # تطبيق الذكاء الاصطناعي لتحسين الإشارات
+            try:
+                from ai_signal_optimizer import ai_optimizer
                 
-                socketio.emit('trading_signal', signal)
-                logging.info(f"Trading signal: {signal['type']} {signal['asset_name']} at {signal['price']}")
+                for raw_signal in raw_signals:
+                    # فحص الإشارة بالذكاء الاصطناعي
+                    should_proceed, ai_analysis = ai_optimizer.should_generate_signal(raw_signal)
+                    
+                    if should_proceed:
+                        # تحسين جودة الإشارة
+                        quality_analysis = ai_optimizer.analyze_signal_quality(raw_signal)
+                        
+                        # إضافة تحليل الذكاء الاصطناعي للإشارة
+                        enhanced_signal = raw_signal.copy()
+                        enhanced_signal.update({
+                            'ai_quality_score': quality_analysis['quality_score'],
+                            'ai_confidence': quality_analysis['ai_confidence'],
+                            'ai_recommendations': quality_analysis['recommendations'][:2],  # أهم توصيتين
+                            'risk_level': quality_analysis['risk_level'],
+                            'ai_approved': True,
+                            'reason': f"{raw_signal.get('reason', '')} - مُحسَّن بالذكاء الاصطناعي ✨"
+                        })
+                        
+                        # تتبع الإشارة المحسنة
+                        try:
+                            from real_trades_tracker import real_trades_tracker
+                            trade_id = real_trades_tracker.track_real_signal(enhanced_signal)
+                            enhanced_signal['trade_id'] = trade_id
+                        except Exception as e:
+                            logging.error(f"Error tracking AI-enhanced signal: {e}")
+                        
+                        socketio.emit('trading_signal', enhanced_signal)
+                        logging.info(f"🧠 AI-Enhanced signal: {enhanced_signal['type']} {enhanced_signal['asset_name']} (Quality: {quality_analysis['quality_score']}/100)")
+                        
+                    else:
+                        logging.info(f"🚫 AI rejected signal: {raw_signal['asset_name']} - {ai_analysis.get('reason', 'Low quality')}")
+                        
+            except Exception as e:
+                logging.error(f"Error in AI signal optimization: {e}")
+                # في حالة خطأ، استخدم الإشارات العادية
+                for signal in raw_signals:
+                    try:
+                        from real_trades_tracker import real_trades_tracker
+                        trade_id = real_trades_tracker.track_real_signal(signal)
+                        signal['trade_id'] = trade_id
+                    except Exception as e:
+                        logging.error(f"Error tracking fallback signal: {e}")
+                    
+                    socketio.emit('trading_signal', signal)
+                    logging.info(f"Fallback signal: {signal['type']} {signal['asset_name']} at {signal['price']}")
             
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
@@ -518,17 +558,20 @@ def price_monitor():
 # API للحصول على إحصائيات الصفقات الحقيقية
 @app.route('/api/trades-stats')
 def get_trades_stats():
-    """إحصائيات الصفقات الحقيقية من السوق"""
+    """إحصائيات الصفقات الحقيقية من السوق مع تحليل الذكاء الاصطناعي"""
     try:
         from real_trades_tracker import real_trades_tracker
+        from ai_signal_optimizer import ai_optimizer
         
         stats = real_trades_tracker.get_real_statistics(30)
         recommendations = real_trades_tracker.generate_real_recommendations()
+        ai_report = ai_optimizer.get_ai_performance_report()
         
         return jsonify({
             'success': True,
             'stats': stats,
-            'recommendations': recommendations
+            'recommendations': recommendations,
+            'ai_performance': ai_report
         })
     except Exception as e:
         logging.error(f"خطأ في جلب الإحصائيات الحقيقية: {e}")

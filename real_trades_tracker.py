@@ -130,6 +130,15 @@ class RealTradesTracker:
         
         self.total_confidence += trade['confidence']
         
+        # إرسال النتيجة للذكاء الاصطناعي للتعلم
+        try:
+            from ai_signal_optimizer import ai_optimizer
+            result_type = 'winning' if is_winning else 'losing'
+            ai_optimizer.learn_from_result(trade, result_type, actual_profit)
+            logging.info(f"🧠 AI تعلم من النتيجة: {result_type} - {trade['asset_id']}")
+        except Exception as e:
+            logging.error(f"Error sending result to AI: {e}")
+        
         # تحديد أن الصفقة تم تقييمها
         trade['is_evaluated'] = True
         
