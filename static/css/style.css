@@ -769,15 +769,99 @@ body.theme-light-blue .asset-row:hover {
 }
 
 .trend-indicator {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 0.85em;
+    margin: 8px 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.trend-main {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 8px;
-    border-radius: 15px;
-    border: 1px solid transparent;
-    background: rgba(255, 255, 255, 0.1);
-    font-size: 0.85em;
-    max-width: fit-content;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.trend-status {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+.trend-status.volatile {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.trend-status.bullish {
+    background: #dcfce7;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.trend-status.bearish {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.trend-status.sideways {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.trend-status.analyzing {
+    background: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fed7aa;
+}
+
+.trend-indicator.volatile {
+    border-color: #dc2626;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    animation: pulse-red 2s infinite;
+}
+
+.trend-indicator.bullish {
+    border-color: #16a34a;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
+.trend-indicator.bearish {
+    border-color: #dc2626;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.trend-indicator.sideways {
+    border-color: #64748b;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.trend-indicator.analyzing {
+    border-color: #d97706;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    animation: pulse-yellow 2s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2); }
+    50% { box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4); }
+}
+
+@keyframes pulse-yellow {
+    0%, 100% { box-shadow: 0 2px 6px rgba(217, 119, 6, 0.2); }
+    50% { box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4); }
 }
 
 .trend-icon {

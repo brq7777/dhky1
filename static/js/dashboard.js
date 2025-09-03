@@ -209,19 +209,44 @@ class TradingDashboard {
                 priceElement.className = 'price';
             }
             
-            // Update trend indicator
+            // Update trend indicator with signal blocking info
             if (trendElement && prices[assetId].trend) {
                 const trend = prices[assetId].trend;
+                const volatility = trend.volatility || 0;
+                const isVolatile = volatility > 5 || trend.trend === 'volatile';
+                
                 if (trend.trend && trend.trend !== 'unknown') {
+                    let trendClass = trend.trend;
+                    let statusText = '';
+                    
+                    if (isVolatile) {
+                        trendClass = 'volatile';
+                        statusText = ' ⚠️ متذبذب - إشارات محظورة';
+                    } else {
+                        statusText = ' ✅ إشارات مفعلة';
+                    }
+                    
                     trendElement.innerHTML = `
-                        <span class="trend-icon" style="color: ${trend.color}">${trend.direction}</span>
-                        <span class="trend-text" style="color: ${trend.color}">${trend.trend_ar}</span>
-                        <span class="trend-strength">${trend.strength}%</span>
+                        <div class="trend-main">
+                            <span class="trend-icon" style="color: ${trend.color}">${trend.direction}</span>
+                            <span class="trend-text" style="color: ${trend.color}">${trend.trend_ar}</span>
+                            <span class="trend-strength">${trend.strength}%</span>
+                        </div>
+                        <div class="trend-status ${trendClass}">${statusText}</div>
                     `;
+                    trendElement.className = `trend-indicator ${trendClass}`;
                     trendElement.style.borderColor = trend.color;
                     trendElement.style.display = 'block';
                 } else {
-                    trendElement.style.display = 'none';
+                    trendElement.innerHTML = `
+                        <div class="trend-main">
+                            <span class="trend-icon">🔍</span>
+                            <span class="trend-text">جاري التحليل</span>
+                        </div>
+                        <div class="trend-status analyzing">⏳ تحليل الاتجاه</div>
+                    `;
+                    trendElement.className = 'trend-indicator analyzing';
+                    trendElement.style.display = 'block';
                 }
             }
         });
