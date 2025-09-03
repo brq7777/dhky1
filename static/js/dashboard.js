@@ -525,27 +525,40 @@ class TradingDashboard {
     }
     
     playAlertSound(options = {}) {
-        const { frequency = 880, duration = 180 } = options;
+        const { frequency = 880, duration = 500 } = options;
         
         console.log('Attempting to play alert sound:', { frequency, duration });
         
         try {
-            // Use the uploaded MP3 file for all alerts
-            const audio = new Audio('/static/sounds/alert.mp3');
-            audio.volume = 0.8;
-            audio.currentTime = 0; // Reset to beginning
+            // استخدام Web Audio API مباشرة مع تحسينات
+            if (this.audioContext && this.audioContext.state === 'running' && !this.useFallbackAudio) {
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                oscillator.type = 'sine';
+                
+                // تحسين منحنى الصوت
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration / 1000);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + duration / 1000);
+                
+                console.log('Web Audio API sound played successfully');
+                return;
+            }
             
-            // Try to play immediately
-            audio.play().then(() => {
-                console.log('Alert sound played successfully');
-            }).catch(err => {
-                console.log('MP3 alert sound failed, using fallback:', err);
-                this.playFallbackSound();
-            });
+            // Fallback للمتصفحات القديمة
+            this.playFallbackSound(frequency, duration);
             
         } catch (error) {
-            console.log('MP3 audio error, using fallback:', error);
-            this.playFallbackSound();
+            console.log('Audio context error, using fallback:', error);
+            this.playFallbackSound(frequency, duration);
         }
     }
     

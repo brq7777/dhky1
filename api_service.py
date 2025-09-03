@@ -571,7 +571,7 @@ class PriceService:
         }
     
     def _analyze_technical_indicators(self, asset_id: str, price_data: Dict, current_time: float) -> Optional[Dict]:
-        """Analyze technical indicators and generate trading signal"""
+        """Advanced technical analysis for signal generation with trend confirmation"""
         if asset_id not in self.price_history or len(self.price_history[asset_id]) < 10:
             return None  # Need more data for analysis
         
@@ -584,51 +584,63 @@ class PriceService:
         sma_long = self._calculate_moving_average(prices, 15)   # 15-period SMA
         price_change_5 = self._calculate_price_change_percent(prices, 5)
         
-        # Signal generation logic based on technical analysis
+        # Get current trend analysis
+        trend_info = self.trend_analysis.get(asset_id, {})
+        current_trend = trend_info.get('trend', 'analyzing')
+        volatility = trend_info.get('volatility', 0)
+        
+        # ★ منع الإشارات في الأسواق المتذبذبة أو الجانبية
+        if current_trend in ['volatile', 'sideways'] or volatility > 3:
+            logging.info(f"منع إشارة {asset_id} - السوق {current_trend}, تذبذب: {volatility}%")
+            return None
+        
+        # Signal generation logic based on trend and technical indicators
         signal_strength = 0
         signal_type = None
         reasons = []
         
-        # RSI Analysis
-        if rsi < 30:  # Oversold
-            signal_strength += 30
-            signal_type = 'BUY'
-            reasons.append('RSI oversold')
-        elif rsi > 70:  # Overbought
-            signal_strength += 30
-            signal_type = 'SELL'
-            reasons.append('RSI overbought')
-        
-        # Moving Average Crossover
-        if sma_short > sma_long and current_price > sma_short:
-            signal_strength += 25
-            if signal_type != 'SELL':
+        # ★ الإشارات بناءً على الاتجاه والمؤشرات معاً
+        if current_trend == 'uptrend':
+            # في الاتجاه الصاعد - نبحث عن إشارات شراء فقط
+            if rsi < 60 and current_price > sma_short and sma_short > sma_long:
+                signal_strength += 45
                 signal_type = 'BUY'
-                reasons.append('Price above MA')
-        elif sma_short < sma_long and current_price < sma_short:
-            signal_strength += 25
-            if signal_type != 'BUY':
+                reasons.append('اتجاه صاعد + مؤشرات إيجابية')
+            
+            if price_change_5 > 0.5:  # زخم إيجابي
+                signal_strength += 25
+                reasons.append('زخم صاعد قوي')
+                
+        elif current_trend == 'downtrend':
+            # في الاتجاه الهابط - نبحث عن إشارات بيع فقط
+            if rsi > 40 and current_price < sma_short and sma_short < sma_long:
+                signal_strength += 45
                 signal_type = 'SELL'
-                reasons.append('Price below MA')
+                reasons.append('اتجاه هابط + مؤشرات سلبية')
+            
+            if price_change_5 < -0.5:  # زخم سلبي
+                signal_strength += 25
+                reasons.append('زخم هابط قوي')
         
-        # Price momentum
-        if abs(price_change_5) > 1.0:  # Strong momentum
+        # مؤشرات إضافية للتأكيد (فقط إذا كانت تتماشى مع الاتجاه)
+        if rsi < 30 and current_trend == 'uptrend':  # تشبع بيعي في اتجاه صاعد
             signal_strength += 20
-            if price_change_5 > 0:
-                if signal_type != 'SELL':
-                    signal_type = 'BUY'
-                    reasons.append('Strong upward momentum')
-            else:
-                if signal_type != 'BUY':
-                    signal_type = 'SELL'
-                    reasons.append('Strong downward momentum')
+            signal_type = 'BUY'
+            reasons.append('RSI تشبع بيعي في اتجاه صاعد')
+        elif rsi > 70 and current_trend == 'downtrend':  # تشبع شرائي في اتجاه هابط
+            signal_strength += 20
+            signal_type = 'SELL'
+            reasons.append('RSI تشبع شرائي في اتجاه هابط')
         
-        # Only generate signal if strength is sufficient AND trend is clear
-        trend_info = self.trend_analysis.get(asset_id, {})
-        is_trending = trend_info.get('trend') in ['uptrend', 'downtrend']
+        # ★ شروط صارمة لإصدار الإشارة
+        min_strength = 60  # زيادة الحد الأدنى
+        trend_matches_signal = (
+            (signal_type == 'BUY' and current_trend == 'uptrend') or
+            (signal_type == 'SELL' and current_trend == 'downtrend')
+        )
         
-        if signal_strength >= 40 and signal_type and is_trending:
-            confidence = min(signal_strength + 30, 95)  # Convert strength to confidence
+        if signal_strength >= min_strength and signal_type and reasons and trend_matches_signal:
+            confidence = min(95, signal_strength + 15)
             
             return {
                 'asset_id': asset_id,
@@ -637,11 +649,13 @@ class PriceService:
                 'price': current_price,
                 'confidence': confidence,
                 'timestamp': current_time,
-                'reason': ', '.join(reasons),
+                'reason': f"اتجاه {trend_info.get('trend_ar', current_trend)}: {', '.join(reasons)}",
                 'rsi': round(rsi, 1),
                 'sma_short': round(sma_short, 2),
                 'sma_long': round(sma_long, 2),
-                'price_change_5': round(price_change_5, 2)
+                'price_change_5': round(price_change_5, 2),
+                'trend': current_trend,
+                'volatility': volatility
             }
         
         return None
