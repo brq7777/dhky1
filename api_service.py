@@ -60,6 +60,21 @@ class PriceService:
         # النظام يعمل بالتحليل الفني المستقل فقط
         logging.info("🚀 النظام يعمل بالتحليل الفني المستقل - سريع ومستقر")
     
+    def check_alerts_fast(self, prices):
+        """فحص سريع للإنذارات المفعلة"""
+        triggered_alerts = []
+        # مؤقتاً نعيد قائمة فارغة
+        return triggered_alerts
+    
+    def add_alert(self, asset_id, threshold, alert_type, client_id):
+        """إضافة إنذار جديد"""
+        # مؤقتاً لا نحفظ الإنذارات
+        pass
+    
+    def generate_trading_signals_fast(self, prices):
+        """توليد الإشارات التجارية السريعة"""
+        return self.generate_trading_signals(prices)
+    
     def generate_sample_data(self):
         """توليد بيانات عينة للعمل في الوضع المستقل"""
         base_prices = {

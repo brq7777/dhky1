@@ -35,17 +35,17 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for rock-solid stability
+# Initialize SocketIO for maximum stability in deployment
 socketio = SocketIO(app, 
                    cors_allowed_origins="*", 
-                   ping_timeout=60,        # دقيقة واحدة للاستجابة السريعة
-                   ping_interval=25,       # 25 ثانية للتحديث السريع
-                   logger=True,            # Enable logging to debug issues
-                   engineio_logger=True,   # Enable engine logging
-                   async_mode='threading', # Use threading
-                   transports=['polling', 'websocket'], # دعم WebSocket للسرعة
-                   always_connect=True,    # Always try to connect
-                   cookie=False)           # Disable cookies to avoid session issues
+                   ping_timeout=120,       # مهلة أطول للنشر
+                   ping_interval=60,       # فحص كل دقيقة للاستقرار  
+                   logger=False,           # تقليل السجلات للأداء
+                   engineio_logger=False,  # تقليل سجلات المحرك
+                   async_mode='threading', # استخدام Threading للتوافق
+                   transports=['polling'], # استخدام Polling فقط للاستقرار في النشر
+                   allow_upgrades=False,   # منع التحديثات التلقائية
+                   cookie=False)           # إلغاء ملفات الارتباط
 
 # Initialize price service
 price_service = PriceService()
@@ -146,11 +146,13 @@ def get_system_status():
 def get_ai_stats():
     """الحصول على إحصائيات نظام التعلم الذكي"""
     try:
-        if hasattr(price_service, 'ai_analyzer') and price_service.ai_analyzer:
-            stats = price_service.ai_analyzer.get_ai_learning_stats()
-            return jsonify({'success': True, 'data': stats})
-        else:
-            return jsonify({'success': True, 'data': {'ai_enabled': False, 'message': 'نظام الذكاء الاصطناعي غير متاح'}})
+        # إعادة إحصائيات افتراضية لأن النظام يعمل بدون AI
+        stats = {
+            'ai_enabled': False,
+            'message': 'النظام يعمل بالتحليل الفني المستقل',
+            'analysis_mode': 'independent_technical'
+        }
+        return jsonify({'success': True, 'data': stats})
     except Exception as e:
         logging.error(f"خطأ في الحصول على إحصائيات AI: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -159,19 +161,13 @@ def get_ai_stats():
 def test_openai_api():
     """اختبار اتصال OpenAI API"""
     try:
-        if hasattr(price_service, 'ai_analyzer') and price_service.ai_analyzer:
-            # اختبار اتصال OpenAI
-            test_result = price_service.ai_analyzer.test_openai_connection()
-            return jsonify({'success': True, 'data': test_result})
-        else:
-            return jsonify({
-                'success': False,
-                'data': {
-                    'status': 'error',
-                    'connected': False,
-                    'message': 'نظام الذكاء الاصطناعي غير مفعل'
-                }
-            })
+        # النظام يعمل بدون AI حالياً
+        test_result = {
+            'status': 'disabled',
+            'connected': False,
+            'message': 'النظام يعمل بالتحليل الفني المستقل بدون AI'
+        }
+        return jsonify({'success': True, 'data': test_result})
     except Exception as e:
         logging.error(f"خطأ في اختبار OpenAI API: {str(e)}")
         return jsonify({
@@ -204,8 +200,8 @@ def ai_chat():
                 'error': 'الرسالة طويلة جداً (الحد الأقصى 500 حرف)'
             })
         
-        # التحقق من توفر نظام AI
-        if not hasattr(price_service, 'ai_analyzer') or not price_service.ai_analyzer:
+        # النظام يعمل بدون AI حالياً
+        if True:  # النظام مصمم للعمل بدون AI
             return jsonify({
                 'success': False,
                 'error': 'نظام الذكاء الاصطناعي غير متاح حالياً'
@@ -214,8 +210,8 @@ def ai_chat():
         # الحصول على البيانات الحالية للسوق
         current_prices = price_service.get_all_prices()
         
-        # استخدام نظام AI المحسن
-        ai_response = price_service.ai_analyzer.process_chat_message(user_message, current_prices)
+        # رد تلقائي بدون AI
+        ai_response = f'النظام يعمل حالياً بالتحليل الفني المستقل. تم استلام رسالتك: "{user_message}" - يمكنك مراقبة الإشارات الفنية المتقدمة على الشاشة.'
         
         return jsonify({
             'success': True,
@@ -373,7 +369,10 @@ def register():
 def handle_connect():
     """Handle client connection with session management"""
     from flask import session, request
-    client_id = request.sid
+    try:
+        client_id = request.sid if hasattr(request, 'sid') else 'default'
+    except:
+        client_id = 'default'
     logging.info(f'Client connected: {client_id}')
     
     # Send immediate confirmation
@@ -394,14 +393,16 @@ def handle_connect():
 def handle_disconnect():
     """Handle client disconnection with cleanup"""
     from flask import request
-    client_id = request.sid
+    try:
+        client_id = request.sid if hasattr(request, 'sid') else 'default'
+    except:
+        client_id = 'default'
     logging.info(f'Client disconnected: {client_id}')
     
     # Clean up any client-specific data
     try:
-        # Remove any alerts for this client
-        if hasattr(price_service, 'remove_client_alerts'):
-            price_service.remove_client_alerts(client_id)
+        # تنظيف البيانات المرتبطة بالعميل
+        pass  # تمت إزالة هذه الوظيفة مؤقتاً
     except:
         pass
 
@@ -467,16 +468,14 @@ def price_monitor():
             # Emit updates much less frequently to reduce network load
             if prices:
                 # Only send updates every few cycles to avoid overwhelming the connection
-                if hasattr(price_monitor, 'cycle_count'):
-                    price_monitor.cycle_count += 1
-                else:
-                    price_monitor.cycle_count = 1
+                cycle_count = getattr(price_monitor, 'cycle_count', 0) + 1
+                price_monitor.cycle_count = cycle_count
                 
                 # إرسال تحديثات الأسعار فورياً بدون تأخير
                 socketio.emit('price_update', prices)
                 
                 # إرسال حالة النظام كل دورتين (كل 3-6 ثوان)
-                if price_monitor.cycle_count % 2 == 0:
+                if cycle_count % 2 == 0:
                     status = price_service.get_system_status()
                     socketio.emit('system_status', status)
             
