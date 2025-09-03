@@ -5,9 +5,14 @@ from typing import Dict, List, Optional
 import time
 import random
 
-# استيراد نظام الذكاء الاصطناعي (معطل مؤقتاً)
-AI_ENABLED = False
-logging.info("نظام الذكاء الاصطناعي معطل مؤقتاً - استخدام النظام التقليدي")
+# استيراد نظام الذكاء الاصطناعي 
+AI_ENABLED = True
+try:
+    from ai_service import AITradingAnalyzer
+    logging.info("تم تفعيل نظام الذكاء الاصطناعي بنجاح")
+except ImportError:
+    AI_ENABLED = False
+    logging.warning("فشل في استيراد نظام الذكاء الاصطناعي - استخدام النظام التقليدي")
 
 class PriceService:
     def __init__(self):
@@ -71,8 +76,16 @@ class PriceService:
         self.session.mount('https://', adapter)
         self.session.mount('http://', adapter)
         
-        # نظام الذكاء الاصطناعي معطل مؤقتاً
-        self.ai_analyzer = None
+        # تهيئة نظام الذكاء الاصطناعي
+        if AI_ENABLED:
+            try:
+                self.ai_analyzer = AITradingAnalyzer()
+                logging.info("تم تهيئة محلل الذكاء الاصطناعي بنجاح")
+            except Exception as e:
+                logging.error(f"فشل في تهيئة محلل الذكاء الاصطناعي: {e}")
+                self.ai_analyzer = None
+        else:
+            self.ai_analyzer = None
         
     def get_binance_price(self, symbol: str) -> Optional[float]:
         """Get price from Binance API with offline mode detection"""
