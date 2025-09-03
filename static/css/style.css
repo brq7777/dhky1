@@ -882,8 +882,10 @@ body.theme-light-blue .asset-row:hover {
 }
 
 .trend-strength {
-    color: #95a5a6;
+    color: #e5e7eb;
     font-size: 0.8em;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .price {
@@ -1178,17 +1180,23 @@ body.theme-light-blue .asset-row:hover {
     align-items: center;
     gap: 8px;
     min-width: 200px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .signal-badge {
     display: inline-block;
     padding: 6px 12px;
     border-radius: 20px;
-    font-size: 0.8em;
+    font-size: 0.85em;
     font-weight: bold;
-    color: white;
+    color: #ffffff;
     border: 1px solid;
     animation: signalPulse 2s infinite;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .signal-badge.buy {
@@ -1203,16 +1211,20 @@ body.theme-light-blue .asset-row:hover {
 
 .signal-details {
     font-size: 0.75em;
-    opacity: 0.9;
+    color: #ffffff;
+    font-weight: 600;
+    opacity: 1;
     margin-right: 8px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .signal-confidence {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.2);
     padding: 2px 6px;
     border-radius: 8px;
-    color: #4a90e2;
+    color: #ffffff;
     font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 @keyframes signalPulse {
