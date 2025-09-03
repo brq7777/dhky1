@@ -209,13 +209,21 @@ class TradingDashboard {
                 priceElement.className = 'price';
             }
             
-            // Update trend indicator with signal blocking info
-            if (trendElement && prices[assetId].trend) {
-                const trend = prices[assetId].trend;
+            // Update trend indicator with signal blocking info - ALWAYS SHOW
+            if (trendElement) {
+                const trend = prices[assetId].trend || {
+                    trend: 'analyzing',
+                    trend_ar: 'جاري التحليل',
+                    direction: '🔍',
+                    color: '#95a5a6',
+                    strength: 0,
+                    volatility: 0
+                };
+                
                 const volatility = trend.volatility || 0;
                 const isVolatile = volatility > 5 || trend.trend === 'volatile';
                 
-                if (trend.trend && trend.trend !== 'unknown') {
+                if (trend.trend && trend.trend !== 'unknown' && trend.trend !== 'analyzing') {
                     let trendClass = trend.trend;
                     let statusText = '';
                     
@@ -234,9 +242,8 @@ class TradingDashboard {
                         </div>
                         <div class="trend-status ${trendClass}">${statusText}</div>
                     `;
-                    trendElement.className = `trend-indicator ${trendClass}`;
+                    trendElement.className = `trend-indicator visible ${trendClass}`;
                     trendElement.style.borderColor = trend.color;
-                    trendElement.style.display = 'block';
                 } else {
                     trendElement.innerHTML = `
                         <div class="trend-main">
@@ -245,9 +252,13 @@ class TradingDashboard {
                         </div>
                         <div class="trend-status analyzing">⏳ تحليل الاتجاه</div>
                     `;
-                    trendElement.className = 'trend-indicator analyzing';
-                    trendElement.style.display = 'block';
+                    trendElement.className = 'trend-indicator visible analyzing';
                 }
+                
+                // Force display
+                trendElement.style.display = 'block !important';
+                trendElement.style.visibility = 'visible';
+                trendElement.style.opacity = '1';
             }
         });
     }
@@ -866,11 +877,13 @@ ${data.message}`, 'success');
             if (remaining <= 0) {
                 clearInterval(timer);
                 countdownElement.textContent = '⌛ انتهى';
+                
+                // Clear the entire signal after countdown ends
                 setTimeout(() => {
-                    // Clear the signal after countdown ends
                     const signalArea = document.querySelector(`[data-signal-id="${assetId}"]`);
                     if (signalArea) {
                         signalArea.innerHTML = '';
+                        console.log('Signal cleared for:', assetId);
                     }
                 }, 3000);
             }
@@ -961,8 +974,8 @@ ${data.message}`, 'success');
         
         console.log('Signal displayed successfully for:', signal.asset_id);
         
-        // Start countdown
-        this.startSignalCountdown(signal.asset_id, countdownSpan, 60);
+        // Start countdown (2 minutes = 120 seconds)
+        this.startSignalCountdown(signal.asset_id, countdownSpan, 120);
         
         // Flash the parent row
         const assetRow = signalArea.closest('.asset-row');
