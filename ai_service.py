@@ -1,15 +1,13 @@
 import os
 import json
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import openai
 from openai import OpenAI
 
-from models import db, TradingSignal, AILearningData, MarketData
-
 class AITradingAnalyzer:
-    """نظام التحليل الذكي للتداول مع التعلم من الأخطاء"""
+    """نظام الذكاء الاصطناعي المتطور للتحليل المالي والتداول"""
     
     def __init__(self):
         # إعداد OpenAI
@@ -18,26 +16,85 @@ class AITradingAnalyzer:
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.model = "gpt-5"
         
-        # معايير التحليل
-        self.min_confidence_threshold = 75  # الحد الأدنى للثقة
-        self.trend_filter_enabled = True     # فلترة الاتجاهات الجانبية
+        # ذاكرة المحادثة للمحافظة على السياق
+        self.conversation_memory = []
         
-        logging.info("تم تهيئة نظام التحليل الذكي بنجاح")
+        # قاعدة معرفة مالية
+        self.financial_knowledge = {
+            'crypto': {
+                'BTCUSDT': {
+                    'name': 'بيتكوين',
+                    'volatility': 'عالية',
+                    'key_levels': [50000, 60000, 70000, 100000],
+                    'market_cap_rank': 1,
+                    'adoption': 'واسع',
+                    'institutional': True
+                },
+                'ETHUSDT': {
+                    'name': 'إيثيريوم',
+                    'volatility': 'عالية',
+                    'key_levels': [2000, 3000, 4000, 5000],
+                    'market_cap_rank': 2,
+                    'adoption': 'واسع',
+                    'defi': True
+                }
+            },
+            'forex': {
+                'EUR/USD': {
+                    'name': 'اليورو دولار',
+                    'volatility': 'متوسطة',
+                    'key_levels': [1.0000, 1.0500, 1.1000, 1.2000],
+                    'major_pair': True,
+                    'economic_factors': ['ECB', 'Fed', 'GDP', 'inflation']
+                },
+                'GBP/USD': {
+                    'name': 'الجنيه الإسترليني دولار',
+                    'volatility': 'متوسطة إلى عالية',
+                    'key_levels': [1.2000, 1.2500, 1.3000, 1.4000],
+                    'major_pair': True,
+                    'economic_factors': ['BoE', 'Brexit', 'inflation']
+                },
+                'USD/JPY': {
+                    'name': 'الدولار الأمريكي ين ياباني',
+                    'volatility': 'متوسطة',
+                    'key_levels': [100, 110, 140, 150],
+                    'major_pair': True,
+                    'economic_factors': ['BoJ', 'carry_trade']
+                }
+            },
+            'metals': {
+                'XAU/USD': {
+                    'name': 'الذهب',
+                    'volatility': 'متوسطة',
+                    'key_levels': [1800, 2000, 2500, 3000],
+                    'safe_haven': True,
+                    'inflation_hedge': True,
+                    'economic_factors': ['Fed', 'inflation', 'geopolitics']
+                }
+            }
+        }
+        
+        logging.info("تم تهيئة نظام الذكاء الاصطناعي المتطور بنجاح")
     
     def test_openai_connection(self) -> Dict:
         """اختبار اتصال OpenAI API"""
         try:
-            # اختبار بسيط لاتصال API
             response = self.openai_client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "user", "content": "اختبار الاتصال - أجب بكلمة واحدة: نجح"}
                 ],
-                max_tokens=10,
-                temperature=0
+                max_completion_tokens=10
             )
             
-            result_text = response.choices[0].message.content.strip()
+            if response.choices and response.choices[0].message:
+                result_text = response.choices[0].message.content
+                if result_text:
+                    result_text = result_text.strip()
+                else:
+                    result_text = "استجابة فارغة"
+            else:
+                result_text = "لا توجد استجابة"
             
             return {
                 "status": "success",
@@ -60,399 +117,366 @@ class AITradingAnalyzer:
                 "message": "فشل الاتصال مع OpenAI API - تحقق من مفتاح API أو الاتصال بالإنترنت"
             }
     
-    def analyze_market_with_ai(self, asset_id: str, market_data: Dict) -> Optional[Dict]:
-        """تحليل السوق باستخدام الذكاء الاصطناعي"""
+    def chat_with_ai(self, user_message: str, current_prices: Optional[Dict] = None) -> str:
+        """دردشة ذكية مع الذكاء الاصطناعي حول الأسواق المالية"""
         try:
-            # بناء تحليل بسيط بدون قاعدة بيانات في البداية
-            # تحليل أنماط الشموع
-            candlestick_analysis = self._analyze_candlestick_patterns(market_data)
+            # إضافة رسالة المستخدم إلى الذاكرة
+            self.conversation_memory.append({
+                "role": "user", 
+                "content": user_message,
+                "timestamp": datetime.now().isoformat()
+            })
             
-            # تحليل بسيط للدعم والمقاومة
-            current_price = market_data.get('price', 0)
-            support_resistance = {
-                'support': current_price * 0.98,  # 2% تحت السعر الحالي
-                'resistance': current_price * 1.02,  # 2% فوق السعر الحالي
-                'current_price': current_price,
-                'distance_to_support_percent': 2.0,
-                'distance_to_resistance_percent': 2.0,
-                'near_support': False,
-                'near_resistance': False
-            }
+            # الحد الأقصى لحجم الذاكرة
+            if len(self.conversation_memory) > 20:
+                self.conversation_memory = self.conversation_memory[-15:]
             
-            # بيانات تاريخية بسيطة
-            historical_data = {
-                'recent_market_data': [],
-                'successful_patterns': [],
-                'failed_patterns': []
-            }
+            # بناء السياق للمحادثة
+            system_prompt = self._build_system_prompt(current_prices)
             
-            # بناء prompt للذكاء الاصطناعي
-            analysis_prompt = self._build_analysis_prompt(
-                asset_id, market_data, historical_data, 
-                support_resistance, candlestick_analysis
+            # تحضير رسائل المحادثة
+            messages = [{"role": "system", "content": system_prompt}]
+            
+            # إضافة الذاكرة
+            for msg in self.conversation_memory[-10:]:  # آخر 10 رسائل
+                messages.append({
+                    "role": msg["role"],
+                    "content": msg["content"]
+                })
+            
+            # الحصول على الاستجابة من OpenAI
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                max_completion_tokens=1000,
+                
+                response_format={"type": "json_object"}
             )
             
-            # الحصول على تحليل AI
-            ai_response = self._get_ai_analysis(analysis_prompt)
+            if response.choices and response.choices[0].message and response.choices[0].message.content:
+                try:
+                    ai_response_json = json.loads(response.choices[0].message.content)
+                    ai_message = ai_response_json.get("message", "عذراً، لم أتمكن من فهم طلبك")
+                    
+                    # إضافة استجابة الذكاء الاصطناعي إلى الذاكرة
+                    self.conversation_memory.append({
+                        "role": "assistant",
+                        "content": ai_message,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    
+                    return ai_message
+                    
+                except json.JSONDecodeError:
+                    # في حالة فشل تحليل JSON، استخدم النص مباشرة
+                    ai_message = response.choices[0].message.content or "عذراً، حدث خطأ في المعالجة"
+                    
+                    self.conversation_memory.append({
+                        "role": "assistant",
+                        "content": ai_message,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    
+                    return ai_message
             
-            if ai_response:
-                # إنشاء الإشارة النهائية
-                signal = self._create_trading_signal(asset_id, market_data, ai_response, support_resistance)
+            return "عذراً، لم أتمكن من الحصول على استجابة من النظام"
+            
+        except Exception as e:
+            error_msg = f"خطأ في المحادثة مع الذكاء الاصطناعي: {str(e)}"
+            logging.error(error_msg)
+            return "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى"
+    
+    def _build_system_prompt(self, current_prices: Optional[Dict] = None) -> str:
+        """بناء prompt النظام للذكاء الاصطناعي"""
+        
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        base_prompt = f"""
+أنت خبير مالي متطور ومحلل اقتصادي محترف مدعوم بـ GPT-5 باللغة العربية. اسمك "محلل الأسواق AI المتطور".
+
+مهامك المتطورة:
+1. تقديم تحليلات مالية دقيقة ومفصلة مع توقعات ذكية
+2. شرح المفاهيم المالية بطريقة مبسطة وممتعة
+3. تقديم نصائح استثمارية متوازنة وإستراتيجيات مخصصة
+4. تحليل متقدم للأسواق المالية (العملات الرقمية، الفوركس، المعادن الثمينة)
+5. مساعدة المستخدمين في اتخاذ قرارات مالية مدروسة وذكية
+6. اكتشاف الأنماط والاتجاهات المخفية في البيانات
+7. تحليل المشاعر السوقية والتنبؤ بالتحركات
+8. تقديم تحليلات مقارنة بين الأصول المختلفة
+9. مساعدة في إدارة المخاطر وتنويع المحافظ
+10. تقديم رؤى استثمارية طويلة وقصيرة المدى
+
+قواعد مهمة:
+- أجب دائماً باللغة العربية
+- كن دقيقاً وموضوعياً في تحليلاتك
+- اذكر المخاطر دائماً مع الفرص
+- لا تقدم نصائح مالية مضمونة النتائج
+- استخدم البيانات الحالية عند توفرها
+- كن مفيداً وودوداً في تعاملك
+
+التوقيت الحالي: {current_time}
+
+معلومات السوق الحالية:
+"""
+        
+        if current_prices:
+            base_prompt += "\nالأسعار الحالية:\n"
+            for asset_id, data in current_prices.items():
+                asset_name = self._get_asset_name(asset_id)
+                price = data.get('price', 0)
+                change = data.get('price_change_5', 0)
+                rsi = data.get('rsi', 50)
                 
+                base_prompt += f"- {asset_name} ({asset_id}): {price:.4f}"
+                if change > 0:
+                    base_prompt += f" (↗ +{change:.2f}%)"
+                elif change < 0:
+                    base_prompt += f" (↘ {change:.2f}%)"
+                base_prompt += f" | RSI: {rsi:.1f}\n"
+        
+        base_prompt += """
+يجب أن تكون إجابتك في صيغة JSON بالشكل التالي:
+{
+    "message": "رسالتك هنا باللغة العربية",
+    "analysis_type": "نوع التحليل (تحليل فني، أساسي، عام، إجابة عامة)",
+    "confidence": "مستوى الثقة في التحليل (منخفض، متوسط، عالي)",
+    "recommendations": ["قائمة بالتوصيات إن وجدت"],
+    "risk_warning": "تحذير من المخاطر إن وجد"
+}
+"""
+        
+        return base_prompt
+    
+    def _get_asset_name(self, asset_id: str) -> str:
+        """الحصول على اسم الأصل باللغة العربية"""
+        # البحث في قاعدة المعرفة
+        for category in self.financial_knowledge.values():
+            if asset_id in category:
+                return category[asset_id]['name']
+        
+        # إذا لم يتم العثور على الاسم، استخدم المعرف
+        return asset_id
+    
+    def analyze_market_with_ai(self, asset_id: str, market_data: Dict) -> Optional[Dict]:
+        """تحليل السوق باستخدام الذكاء الاصطناعي المتطور"""
+        try:
+            # الحصول على معلومات الأصل
+            asset_info = self._get_asset_info(asset_id)
+            
+            # بناء تحليل شامل
+            analysis_prompt = self._build_market_analysis_prompt(asset_id, market_data, asset_info)
+            
+            # الحصول على التحليل من الذكاء الاصطناعي
+            ai_analysis = self._get_ai_market_analysis(analysis_prompt)
+            
+            if ai_analysis:
+                # إنشاء إشارة التداول المطورة
+                signal = self._create_enhanced_trading_signal(asset_id, market_data, ai_analysis, asset_info)
                 return signal
             
         except Exception as e:
-            logging.error(f"خطأ في تحليل السوق: {e}")
+            logging.error(f"خطأ في تحليل السوق بالذكاء الاصطناعي: {str(e)}")
             return None
         
         return None
     
-    def _get_historical_context(self, asset_id: str) -> Dict:
-        """الحصول على السياق التاريخي للأصل"""
-        try:
-            # البيانات من آخر 24 ساعة
-            recent_data = MarketData.get_recent_data(asset_id, hours=24)
-            
-            # الإشارات السابقة الناجحة والفاشلة
-            successful_signals = TradingSignal.get_successful_signals_patterns(asset_id, limit=10)
-            failed_signals = TradingSignal.get_failed_signals_patterns(asset_id, limit=10)
-        except Exception as e:
-            logging.warning(f"خطأ في الحصول على البيانات التاريخية: {e}")
-            return {'recent_market_data': [], 'successful_patterns': [], 'failed_patterns': []}
+    def _get_asset_info(self, asset_id: str) -> Dict:
+        """الحصول على معلومات الأصل من قاعدة المعرفة"""
+        for category_name, category in self.financial_knowledge.items():
+            if asset_id in category:
+                info = category[asset_id].copy()
+                info['category'] = category_name
+                return info
         
+        # معلومات افتراضية
         return {
-            'recent_market_data': [
-                {
-                    'price': data.close_price,
-                    'volume': data.volume,
-                    'rsi': data.rsi,
-                    'timestamp': data.timestamp.isoformat()
-                } for data in recent_data[-10:]  # آخر 10 نقاط
-            ],
-            'successful_patterns': [
-                {
-                    'signal_type': sig.signal_type,
-                    'confidence': sig.confidence,
-                    'rsi': sig.rsi,
-                    'trend': sig.trend,
-                    'profit': sig.profit_loss_percent
-                } for sig in successful_signals
-            ],
-            'failed_patterns': [
-                {
-                    'signal_type': sig.signal_type,
-                    'confidence': sig.confidence,
-                    'rsi': sig.rsi,
-                    'trend': sig.trend,
-                    'loss': sig.profit_loss_percent
-                } for sig in failed_signals
-            ]
+            'name': asset_id,
+            'category': 'unknown',
+            'volatility': 'متوسطة',
+            'key_levels': []
         }
     
-    def _calculate_support_resistance(self, asset_id: str, market_data: Dict) -> Dict:
-        """حساب مستويات الدعم والمقاومة"""
-        try:
-            # حساب من البيانات المحفوظة
-            support, resistance = MarketData.calculate_support_resistance(asset_id, days=7)
-        except Exception as e:
-            logging.warning(f"خطأ في حساب الدعم والمقاومة: {e}")
-            support, resistance = None, None
+    def _build_market_analysis_prompt(self, asset_id: str, market_data: Dict, asset_info: Dict) -> str:
+        """بناء prompt تحليل السوق المتطور"""
         
         current_price = market_data.get('price', 0)
-        
-        # حساب القرب من مستويات الدعم والمقاومة
-        distance_to_support = abs(current_price - support) / current_price * 100 if support else 0
-        distance_to_resistance = abs(current_price - resistance) / current_price * 100 if resistance else 0
-        
-        return {
-            'support': support,
-            'resistance': resistance,
-            'current_price': current_price,
-            'distance_to_support_percent': distance_to_support,
-            'distance_to_resistance_percent': distance_to_resistance,
-            'near_support': distance_to_support < 1.0,  # أقل من 1%
-            'near_resistance': distance_to_resistance < 1.0
-        }
-    
-    def _analyze_candlestick_patterns(self, market_data: Dict) -> Dict:
-        """تحليل أنماط الشموع اليابانية"""
-        # هذه دالة مبسطة - في التطبيق الحقيقي نحتاج بيانات OHLCV كاملة
         rsi = market_data.get('rsi', 50)
+        sma_short = market_data.get('sma_short', 0)
+        sma_long = market_data.get('sma_long', 0)
         price_change = market_data.get('price_change_5', 0)
         trend = market_data.get('trend', 'sideways')
         
-        patterns = []
-        reliability = 50
-        
-        # تحديد الأنماط بناءً على RSI والاتجاه
-        if rsi < 30 and trend == 'downtrend':
-            patterns.append('hammer_potential')
-            reliability = 70
-        elif rsi > 70 and trend == 'uptrend':
-            patterns.append('shooting_star_potential')
-            reliability = 70
-        elif abs(price_change) > 2:
-            patterns.append('strong_momentum_candle')
-            reliability = 60
-        
-        return {
-            'detected_patterns': patterns,
-            'reliability': reliability,
-            'trend_confirmation': trend in ['uptrend', 'downtrend']
-        }
-    
-    def _build_analysis_prompt(self, asset_id: str, market_data: Dict, 
-                              historical_data: Dict, support_resistance: Dict,
-                              candlestick_analysis: Dict) -> str:
-        """بناء prompt للذكاء الاصطناعي"""
-        
         prompt = f"""
-أنت خبير تداول محترف ومحلل فني متقدم. قم بتحليل الأصل {asset_id} وتقديم توصية دقيقة.
+أنت خبير تحليل فني ومالي متقدم. قم بتحليل {asset_info['name']} ({asset_id}) وتقديم إشارة تداول دقيقة.
 
-البيانات الحالية:
-- السعر الحالي: {market_data.get('price', 0):.4f}
-- مؤشر RSI: {market_data.get('rsi', 50):.1f}
-- المتوسط المتحرك القصير: {market_data.get('sma_short', 0):.4f}
-- المتوسط المتحرك الطويل: {market_data.get('sma_long', 0):.4f}
-- التغيير في آخر 5 فترات: {market_data.get('price_change_5', 0):.2f}%
-- الاتجاه الحالي: {market_data.get('trend', 'غير محدد')}
+معلومات الأصل:
+- الاسم: {asset_info['name']}
+- الفئة: {asset_info['category']}
+- مستوى التقلب: {asset_info['volatility']}
+- المستويات المهمة: {asset_info.get('key_levels', [])}
 
-مستويات الدعم والمقاومة:
-- مستوى الدعم: {support_resistance.get('support', 0):.4f}
-- مستوى المقاومة: {support_resistance.get('resistance', 0):.4f}
-- قريب من الدعم: {'نعم' if support_resistance.get('near_support') else 'لا'}
-- قريب من المقاومة: {'نعم' if support_resistance.get('near_resistance') else 'لا'}
+البيانات الفنية الحالية:
+- السعر الحالي: {current_price}
+- مؤشر RSI: {rsi}
+- المتوسط المتحرك القصير (20): {sma_short}
+- المتوسط المتحرك الطويل (50): {sma_long}
+- التغيير في آخر 5 فترات: {price_change}%
+- الاتجاه العام: {trend}
 
-تحليل الشموع:
-- الأنماط المكتشفة: {', '.join(candlestick_analysis.get('detected_patterns', ['لا يوجد']))}
-- موثوقية النمط: {candlestick_analysis.get('reliability', 0)}%
+التحليل المطلوب:
+1. تحديد اتجاه السوق (صاعد/هابط/جانبي)
+2. تقييم قوة الاتجاه
+3. تحديد مستويات الدعم والمقاومة
+4. تقييم حالة التشبع الشرائي/البيعي
+5. تقديم توصية (شراء/بيع/انتظار)
+6. تحديد مستوى الثقة في التحليل
+7. تحديد أهداف السعر ووقف الخسارة
 
-الإشارات السابقة الناجحة: {len(historical_data.get('successful_patterns', []))}
-الإشارات السابقة الفاشلة: {len(historical_data.get('failed_patterns', []))}
-
-التعليمات:
-1. حلل جميع المؤشرات الفنية المتاحة
-2. راعي مستويات الدعم والمقاومة في التحليل
-3. اعتبر أنماط الشموع والاتجاه العام
-4. تعلم من الإشارات السابقة الفاشلة وتجنب تكرارها
-5. لا ترسل إشارة إلا إذا كان لديك ثقة عالية (75%+)
-6. تجنب الإشارات في الأسواق المتذبذبة جانبياً
-7. ركز على النقاط القوية للدخول/الخروج
-
-المطلوب منك:
-قدم تحليلاً في صيغة JSON يحتوي على:
-- signal_type: "BUY" أو "SELL" أو "HOLD"
-- confidence: رقم من 1-100
-- reason: سبب مفصل للقرار
-- risk_level: "LOW", "MEDIUM", "HIGH"
-- target_price: السعر المستهدف
-- stop_loss: سعر وقف الخسارة
-- analysis_summary: ملخص التحليل باللغة العربية
-
-مثال للاستجابة:
-{
-    "signal_type": "BUY",
-    "confidence": 85,
-    "reason": "RSI oversold at support level with bullish divergence",
-    "risk_level": "MEDIUM",
-    "target_price": 1.0850,
-    "stop_loss": 1.0780,
-    "analysis_summary": "الأصل عند مستوى دعم قوي مع RSI في منطقة التشبع البيعي"
-}
+أجب بصيغة JSON:
+{{
+    "signal_type": "BUY/SELL/HOLD",
+    "confidence": 75-95,
+    "reason": "سبب الإشارة",
+    "market_condition": "حالة السوق",
+    "trend_strength": "قوة الاتجاه",
+    "support_level": "مستوى الدعم",
+    "resistance_level": "مستوى المقاومة", 
+    "target_price": "السعر المستهدف",
+    "stop_loss": "وقف الخسارة",
+    "risk_level": "LOW/MEDIUM/HIGH",
+    "time_horizon": "قصير/متوسط/طويل المدى",
+    "analysis_summary": "ملخص التحليل"
+}}
 """
+        
         return prompt
     
-    def _get_ai_analysis(self, prompt: str) -> Optional[Dict]:
-        """الحصول على تحليل من OpenAI"""
+    def _get_ai_market_analysis(self, prompt: str) -> Optional[Dict]:
+        """الحصول على تحليل السوق من الذكاء الاصطناعي"""
         try:
             response = self.openai_client.chat.completions.create(
                 model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"},
-                temperature=0.1,  # قليل الإبداع، أكثر دقة
-                max_tokens=1000
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=800,
+                response_format={"type": "json_object"}
             )
             
-            content = response.choices[0].message.content
-            return json.loads(content)
+            if response.choices and response.choices[0].message and response.choices[0].message.content:
+                try:
+                    analysis = json.loads(response.choices[0].message.content)
+                    return analysis
+                except json.JSONDecodeError as e:
+                    logging.error(f"خطأ في تحليل استجابة الذكاء الاصطناعي: {str(e)}")
+                    return None
             
         except Exception as e:
-            logging.error(f"خطأ في الحصول على تحليل AI: {e}")
+            logging.error(f"خطأ في الحصول على تحليل الذكاء الاصطناعي: {str(e)}")
             return None
+        
+        return None
     
-    def _check_learning_rules(self, asset_id: str, ai_response: Dict) -> Tuple[bool, str]:
-        """فحص قواعد التعلم قبل إرسال الإشارة"""
-        # مؤقتاً نتجاهل قواعد التعلم لتجنب مشاكل قاعدة البيانات
-        return False, ""
-    
-    def _create_trading_signal(self, asset_id: str, market_data: Dict, 
-                              ai_response: Dict, support_resistance: Dict) -> Optional[Dict]:
-        """إنشاء إشارة التداول النهائية"""
+    def _create_enhanced_trading_signal(self, asset_id: str, market_data: Dict, 
+                                      ai_analysis: Dict, asset_info: Dict) -> Dict:
+        """إنشاء إشارة تداول محسنة"""
         
-        signal_type = ai_response.get('signal_type')
-        confidence = ai_response.get('confidence', 0)
+        current_time = datetime.now()
         
-        # التحقق من الحد الأدنى للثقة
-        if confidence < self.min_confidence_threshold:
-            return None
+        # استخراج البيانات من التحليل
+        signal_type = ai_analysis.get('signal_type', 'HOLD')
+        confidence = min(95, max(75, ai_analysis.get('confidence', 80)))
+        reason = ai_analysis.get('reason', 'تحليل فني متوازن')
         
-        # التحقق من عدم إرسال إشارات في الأسواق الجانبية
-        if (self.trend_filter_enabled and 
-            market_data.get('trend') == 'sideways' and 
-            confidence < 90):
-            return None
+        # حساب معلومات إضافية
+        current_price = market_data.get('price', 0)
+        target_price = ai_analysis.get('target_price')
+        stop_loss = ai_analysis.get('stop_loss')
         
-        # إنشاء الإشارة
+        # تحويل إلى أرقام إذا كانت نصوص
+        try:
+            if isinstance(target_price, str):
+                target_price = float(target_price) if target_price.replace('.', '').isdigit() else current_price * 1.02
+            elif target_price is None:
+                target_price = current_price * 1.02 if signal_type == 'BUY' else current_price * 0.98
+        except:
+            target_price = current_price * 1.02 if signal_type == 'BUY' else current_price * 0.98
+            
+        try:
+            if isinstance(stop_loss, str):
+                stop_loss = float(stop_loss) if stop_loss.replace('.', '').isdigit() else current_price * 0.98
+            elif stop_loss is None:
+                stop_loss = current_price * 0.98 if signal_type == 'BUY' else current_price * 1.02
+        except:
+            stop_loss = current_price * 0.98 if signal_type == 'BUY' else current_price * 1.02
+        
         signal = {
             'asset_id': asset_id,
-            'asset_name': market_data.get('name', asset_id),
+            'asset_name': asset_info['name'],
             'type': signal_type,
-            'price': market_data.get('price'),
+            'price': current_price,
             'confidence': confidence,
-            'timestamp': datetime.utcnow().timestamp(),
-            'reason': ai_response.get('reason', ''),
-            'rsi': market_data.get('rsi'),
-            'sma_short': market_data.get('sma_short'),
-            'sma_long': market_data.get('sma_long'),
-            'price_change_5': market_data.get('price_change_5'),
-            'trend': market_data.get('trend'),
-            'support_level': support_resistance.get('support'),
-            'resistance_level': support_resistance.get('resistance'),
-            'target_price': ai_response.get('target_price'),
-            'stop_loss': ai_response.get('stop_loss'),
-            'risk_level': ai_response.get('risk_level'),
-            'ai_analysis': ai_response.get('analysis_summary'),
-            'ai_confidence': confidence
+            'timestamp': current_time.timestamp(),
+            'reason': reason,
+            'rsi': market_data.get('rsi', 50),
+            'sma_short': market_data.get('sma_short', current_price),
+            'sma_long': market_data.get('sma_long', current_price),
+            'price_change_5': market_data.get('price_change_5', 0),
+            'target_price': target_price,
+            'stop_loss': stop_loss,
+            'risk_level': ai_analysis.get('risk_level', 'MEDIUM'),
+            'market_condition': ai_analysis.get('market_condition', 'متوازن'),
+            'trend_strength': ai_analysis.get('trend_strength', 'متوسط'),
+            'time_horizon': ai_analysis.get('time_horizon', 'قصير المدى'),
+            'analysis_summary': ai_analysis.get('analysis_summary', 'تحليل فني شامل'),
+            'ai_powered': True
         }
         
         return signal
     
-    def _save_signal_to_database(self, signal: Dict, ai_response: Dict):
-        """حفظ الإشارة في قاعدة البيانات"""
+    def get_market_insights(self, user_question: str) -> str:
+        """الحصول على رؤى السوق العامة"""
         try:
-            from app import app
-            with app.app_context():
-                trading_signal = TradingSignal(
-                    asset_id=signal['asset_id'],
-                    asset_name=signal['asset_name'],
-                    signal_type=signal['type'],
-                    price=signal['price'],
-                    confidence=signal['confidence'],
-                    reason=signal['reason'],
-                    rsi=signal.get('rsi'),
-                    sma_short=signal.get('sma_short'),
-                    sma_long=signal.get('sma_long'),
-                    price_change_5=signal.get('price_change_5'),
-                    trend=signal.get('trend'),
-                    support_level=signal.get('support_level'),
-                    resistance_level=signal.get('resistance_level'),
-                    ai_analysis=signal.get('ai_analysis'),
-                    ai_confidence=signal.get('ai_confidence'),
-                    learning_features=json.dumps({
-                        'rsi': signal.get('rsi'),
-                        'trend': signal.get('trend'),
-                        'near_support': abs(signal['price'] - signal.get('support_level', 0)) < signal['price'] * 0.01 if signal.get('support_level') else False,
-                        'near_resistance': abs(signal['price'] - signal.get('resistance_level', 0)) < signal['price'] * 0.01 if signal.get('resistance_level') else False,
-                        'risk_level': ai_response.get('risk_level')
-                    })
-                )
+            insights_prompt = f"""
+أنت خبير اقتصادي ومحلل أسواق مالية. المستخدم يسأل: "{user_question}"
+
+قدم إجابة شاملة ومفيدة تتضمن:
+1. تحليل السؤال والسياق
+2. معلومات ذات صلة بالأسواق المالية
+3. نصائح عملية إن أمكن
+4. تحذيرات من المخاطر
+
+أجب باللغة العربية بصيغة JSON:
+{{
+    "message": "إجابتك الشاملة هنا",
+    "insights": ["رؤية 1", "رؤية 2", "رؤية 3"],
+    "recommendations": ["توصية 1", "توصية 2"],
+    "risk_warning": "تحذير من المخاطر"
+}}
+"""
+            
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": insights_prompt}],
+                max_completion_tokens=1000,
                 
-                db.session.add(trading_signal)
-                db.session.commit()
+                response_format={"type": "json_object"}
+            )
             
-            logging.info(f"تم حفظ إشارة {signal['type']} لـ {signal['asset_id']}")
+            if response.choices and response.choices[0].message and response.choices[0].message.content:
+                try:
+                    insights = json.loads(response.choices[0].message.content)
+                    return insights.get('message', 'عذراً، لم أتمكن من تقديم رؤى مفيدة')
+                except json.JSONDecodeError:
+                    return response.choices[0].message.content or "عذراً، حدث خطأ في المعالجة"
+            
+            return "عذراً، لم أتمكن من الحصول على رؤى السوق"
             
         except Exception as e:
-            logging.error(f"خطأ في حفظ الإشارة: {e}")
-            db.session.rollback()
+            logging.error(f"خطأ في الحصول على رؤى السوق: {str(e)}")
+            return "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى"
     
-    def learn_from_failed_signal(self, signal_id: int):
-        """التعلم من إشارة فاشلة"""
-        try:
-            signal = TradingSignal.query.get(signal_id)
-            if not signal or signal.is_successful is not False:
-                return
-            
-            # استخراج الأنماط الفاشلة
-            learning_features = json.loads(signal.learning_features) if signal.learning_features else {}
-            
-            # البحث عن قاعدة تعلم موجودة أو إنشاء جديدة
-            learning_rule = AILearningData.query.filter_by(
-                asset_id=signal.asset_id,
-                failed_pattern_type=f"{signal.signal_type}_{signal.trend}"
-            ).first()
-            
-            if learning_rule:
-                learning_rule.increase_avoidance()
-            else:
-                # إنشاء قاعدة تعلم جديدة
-                learning_rule = AILearningData(
-                    asset_id=signal.asset_id,
-                    failed_pattern_type=f"{signal.signal_type}_{signal.trend}",
-                    failed_conditions=json.dumps(learning_features),
-                    failure_reason=signal.reason,
-                    avoid_when_rsi_above=signal.rsi + 5 if signal.signal_type == 'SELL' and signal.rsi else None,
-                    avoid_when_rsi_below=signal.rsi - 5 if signal.signal_type == 'BUY' and signal.rsi else None,
-                    avoid_when_trend=signal.trend if signal.trend == 'sideways' else None
-                )
-                
-                db.session.add(learning_rule)
-            
-            db.session.commit()
-            logging.info(f"تم التعلم من الإشارة الفاشلة {signal_id}")
-            
-        except Exception as e:
-            logging.error(f"خطأ في التعلم من الإشارة الفاشلة: {e}")
-            db.session.rollback()
-    
-    def evaluate_old_signals(self, hours_ago: int = 24):
-        """تقييم الإشارات القديمة وتحديث نتائجها"""
-        try:
-            cutoff_time = datetime.utcnow() - timedelta(hours=hours_ago)
-            
-            # الحصول على الإشارات غير المقيمة
-            unevaluated_signals = TradingSignal.query.filter(
-                TradingSignal.created_at <= cutoff_time,
-                TradingSignal.is_successful.is_(None)
-            ).all()
-            
-            for signal in unevaluated_signals:
-                # هنا نحتاج للحصول على السعر الحالي لتقييم النجاح
-                # في التطبيق الحقيقي، نحصل على السعر من API
-                # مؤقتاً سنستخدم قيمة عشوائية للتجربة
-                current_price = signal.price * (1 + (0.02 if signal.signal_type == 'BUY' else -0.02))
-                signal.evaluate_success(current_price)
-                
-                # التعلم من الإشارات الفاشلة
-                if signal.is_successful == False:
-                    self.learn_from_failed_signal(signal.id)
-            
-            logging.info(f"تم تقييم {len(unevaluated_signals)} إشارة")
-            
-        except Exception as e:
-            logging.error(f"خطأ في تقييم الإشارات القديمة: {e}")
-    
-    def get_ai_learning_stats(self) -> Dict:
-        """إحصائيات التعلم من الأخطاء"""
-        try:
-            total_signals = TradingSignal.query.count()
-            evaluated_signals = TradingSignal.query.filter(TradingSignal.is_successful.isnot(None)).count()
-            successful_signals = TradingSignal.query.filter(TradingSignal.is_successful == True).count()
-            failed_signals = TradingSignal.query.filter(TradingSignal.is_successful == False).count()
-            learning_rules = AILearningData.query.count()
-            
-            success_rate = (successful_signals / evaluated_signals * 100) if evaluated_signals > 0 else 0
-            
-            return {
-                'total_signals': total_signals,
-                'evaluated_signals': evaluated_signals,
-                'successful_signals': successful_signals,
-                'failed_signals': failed_signals,
-                'success_rate': round(success_rate, 2),
-                'learning_rules': learning_rules,
-                'ai_enabled': True
-            }
-            
-        except Exception as e:
-            logging.error(f"خطأ في الحصول على إحصائيات التعلم: {e}")
-            return {'ai_enabled': False, 'error': str(e)}
+    def reset_conversation(self):
+        """إعادة تعيين ذاكرة المحادثة"""
+        self.conversation_memory = []
+        logging.info("تم إعادة تعيين ذاكرة المحادثة")
