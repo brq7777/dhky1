@@ -16,9 +16,15 @@ logging.basicConfig(level=logging.DEBUG)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
 
-# إعداد قاعدة البيانات
+# إعداد قاعدة البيانات مع إعدادات محسنة للاستقرار
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
+    'pool_timeout': 20,
+    'max_overflow': 10
+}
 
 # إستيراد نموذج المستخدم وإعداد قاعدة البيانات
 from models import db, User, Subscription, DeviceFingerprint, PaymentRequest, Comment
@@ -35,17 +41,17 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for maximum stability in deployment
+# Initialize SocketIO optimized for gunicorn deployment
 socketio = SocketIO(app, 
-                   cors_allowed_origins="*", 
-                   ping_timeout=120,       # مهلة أطول للنشر
-                   ping_interval=60,       # فحص كل دقيقة للاستقرار  
-                   logger=False,           # تقليل السجلات للأداء
-                   engineio_logger=False,  # تقليل سجلات المحرك
-                   async_mode='threading', # استخدام Threading للتوافق
-                   transports=['polling'], # استخدام Polling فقط للاستقرار في النشر
-                   allow_upgrades=False,   # منع التحديثات التلقائية
-                   cookie=False)           # إلغاء ملفات الارتباط
+                   cors_allowed_origins="*",
+                   ping_timeout=60,        # مهلة مناسبة للنشر
+                   ping_interval=25,       # فحص منتظم للاستقرار
+                   logger=False,
+                   engineio_logger=False,
+                   async_mode='threading',
+                   transports=['polling'],  # polling فقط لضمان الاستقرار مع gunicorn
+                   allow_upgrades=False,    # منع الترقية لتجنب مشاكل WebSocket
+                   cookie=False)
 
 # Initialize price service
 price_service = PriceService()
@@ -76,23 +82,28 @@ with app.app_context():
     admin_user.set_password(admin_password)
     
     try:
-        db.session.add(admin_user)
-        db.session.commit()
-        
-        # إنشاء اشتراك دائم للمدير
-        admin_subscription = Subscription()
-        admin_subscription.user_id = admin_user.id
-        admin_subscription.status = 'active'
-        admin_subscription.subscription_start = datetime.utcnow()
-        admin_subscription.subscription_end = datetime.utcnow() + timedelta(days=365 * 10)  # 10 سنوات
-        
-        db.session.add(admin_subscription)
-        db.session.commit()
-        
-        logging.info(f"تم إنشاء المستخدم الافتراضي كمدير: {admin_email}")
+        # التحقق من وجود المستخدم أولاً
+        existing_user = User.query.filter_by(email=admin_email).first()
+        if not existing_user:
+            db.session.add(admin_user)
+            db.session.commit()
+            
+            # إنشاء اشتراك دائم للمدير
+            admin_subscription = Subscription()
+            admin_subscription.user_id = admin_user.id
+            admin_subscription.status = 'active'
+            admin_subscription.subscription_start = datetime.utcnow()
+            admin_subscription.subscription_end = datetime.utcnow() + timedelta(days=365 * 10)
+            
+            db.session.add(admin_subscription)
+            db.session.commit()
+            
+            logging.info(f"تم إنشاء المستخدم الافتراضي كمدير: {admin_email}")
+        else:
+            logging.info(f"المستخدم الافتراضي موجود مسبقاً: {admin_email}")
     except Exception as e:
         db.session.rollback()
-        logging.error(f"خطأ في إنشاء المستخدم الافتراضي: {e}")
+        logging.warning(f"تحذير في إعداد المستخدم الافتراضي: {e}")
 
 @app.route('/')
 def index():
@@ -368,9 +379,11 @@ def register():
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection with session management"""
-    from flask import session, request
+    from flask import session
     try:
-        client_id = request.sid if hasattr(request, 'sid') else 'default'
+        # Use Flask-SocketIO's request object instead of Flask's
+        from flask_socketio import request as socketio_request
+        client_id = socketio_request.sid if hasattr(socketio_request, 'sid') else 'default'
     except:
         client_id = 'default'
     logging.info(f'Client connected: {client_id}')
@@ -392,9 +405,10 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     """Handle client disconnection with cleanup"""
-    from flask import request
     try:
-        client_id = request.sid if hasattr(request, 'sid') else 'default'
+        # Use Flask-SocketIO's request object instead of Flask's
+        from flask_socketio import request as socketio_request
+        client_id = socketio_request.sid if hasattr(socketio_request, 'sid') else 'default'
     except:
         client_id = 'default'
     logging.info(f'Client disconnected: {client_id}')
@@ -468,8 +482,12 @@ def price_monitor():
             # Emit updates much less frequently to reduce network load
             if prices:
                 # Only send updates every few cycles to avoid overwhelming the connection
-                cycle_count = getattr(price_monitor, 'cycle_count', 0) + 1
-                price_monitor.cycle_count = cycle_count
+                # Use a global variable instead of function attribute
+                global cycle_count
+                try:
+                    cycle_count += 1
+                except NameError:
+                    cycle_count = 1
                 
                 # إرسال تحديثات الأسعار فورياً بدون تأخير
                 socketio.emit('price_update', prices)

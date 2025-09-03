@@ -49,19 +49,19 @@ class TradingDashboard {
     }
     
     initializeSocket() {
-        // Initialize with polling-only for maximum stability
+        // Initialize with polling-only for maximum stability with gunicorn
         this.socket = io({
-            timeout: 20000,             // تقليل وقت الانتظار لـ 20 ثانية للسرعة
-            reconnection: true,         // Enable auto-reconnection
-            reconnectionDelay: 1000,    // إعادة الاتصال خلال ثانية واحدة
-            reconnectionAttempts: 15,   // محاولات أكثر للاتصال
-            reconnectionDelayMax: 5000, // أقصى تأخير 5 ثوان
-            forceNew: true,             // Always create new connection
-            transports: ['websocket', 'polling'], // دعم WebSocket أولاً للسرعة
-            upgrade: true,              // تفعيل الترقية لـ WebSocket
-            rememberUpgrade: true,      // تذكر الترقية للسرعة
-            forceBase64: false,         // Use binary if possible
-            timestampRequests: false    // Disable timestamps to reduce overhead
+            timeout: 60000,             // مهلة طويلة تتماشى مع الخادم
+            reconnection: true,         
+            reconnectionDelay: 2000,    // تأخير أطول للاستقرار
+            reconnectionAttempts: 10,   // محاولات معقولة
+            reconnectionDelayMax: 15000, // حد أقصى للتأخير
+            forceNew: true,             
+            transports: ['polling'],    // polling فقط للاستقرار
+            upgrade: false,             // منع الترقية
+            rememberUpgrade: false,     
+            forceBase64: false,         
+            timestampRequests: false    
         });
         
         this.socket.on('connect', () => {
@@ -82,6 +82,16 @@ class TradingDashboard {
         this.socket.on('connect_error', (error) => {
             console.log('Connection error:', error);
             this.updateConnectionStatus(false);
+            
+            // إعادة محاولة الاتصال بعد تأخير قصير للتأكد من الاستقرار
+            if (error.type === 'TransportError') {
+                console.log('Transport error detected, retrying connection...');
+                setTimeout(() => {
+                    if (!this.socket.connected) {
+                        this.socket.connect();
+                    }
+                }, 3000);
+            }
         });
         
         this.socket.on('reconnect', (attemptNumber) => {
