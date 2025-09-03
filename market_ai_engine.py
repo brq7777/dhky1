@@ -19,6 +19,14 @@ from dataclasses import dataclass
 from enum import Enum
 import numpy as np
 
+try:
+    from advanced_market_analyzer import analyze_asset_comprehensive
+    COMPREHENSIVE_ANALYSIS_ENABLED = True
+    logging.info("🔍 نظام التحليل الشامل المتقدم مفعل")
+except ImportError:
+    COMPREHENSIVE_ANALYSIS_ENABLED = False
+    logging.warning("⚠️ نظام التحليل الشامل غير متوفر")
+
 class MarketCondition(Enum):
     """حالة السوق"""
     STABLE = "stable"           # مستقر
@@ -112,17 +120,29 @@ class AdvancedMarketAI:
         current_price = asset_data.get('price', 0)
         trend_info = asset_data.get('trend', {})
         
+        # === تحليل شامل متقدم إذا كان متوفراً ===
+        comprehensive_data = None
+        if COMPREHENSIVE_ANALYSIS_ENABLED and historical_data:
+            try:
+                comprehensive_data = analyze_asset_comprehensive(
+                    asset_id, asset_data, historical_data
+                )
+                if comprehensive_data:
+                    logging.info(f"🔍 تحليل شامل مكتمل لـ {asset_id}")
+            except Exception as e:
+                logging.warning(f"خطأ في التحليل الشامل لـ {asset_id}: {e}")
+        
         # === 1. تحليل استقرار السوق ===
-        stability_analysis = self._analyze_market_stability(asset_data, historical_data)
+        stability_analysis = self._analyze_market_stability(asset_data, historical_data, comprehensive_data)
         
         # === 2. تحليل قوة ووضوح الاتجاه ===
-        trend_analysis = self._analyze_trend_clarity(asset_data, trend_info)
+        trend_analysis = self._analyze_trend_clarity(asset_data, trend_info, comprehensive_data)
         
         # === 3. تحليل التقلبات ===
-        volatility_analysis = self._analyze_volatility_levels(asset_data)
+        volatility_analysis = self._analyze_volatility_levels(asset_data, comprehensive_data)
         
         # === 4. تحليل توافق المؤشرات ===
-        indicators_analysis = self._analyze_indicators_consensus(asset_data)
+        indicators_analysis = self._analyze_indicators_consensus(asset_data, comprehensive_data)
         
         # === 5. حساب الثقة الإجمالية ===
         confidence_level = self._calculate_overall_confidence(
@@ -201,8 +221,10 @@ class AdvancedMarketAI:
         # === 8. حساب الثقة النهائية ===
         final_confidence = self._calculate_final_confidence(market_analysis, risk_reward_ratio)
         
-        # === 9. توليد التفسير الذكي ===
-        ai_reasoning = self._generate_ai_reasoning(market_analysis, signal_type, risk_reward_ratio)
+        # === 9. توليد التفسير الذكي المطور ===
+        ai_reasoning = self._generate_enhanced_ai_reasoning(
+            market_analysis, signal_type, risk_reward_ratio, comprehensive_data
+        )
         
         # === 10. حساب العوائد المتوقعة ===
         expected_profit = abs(take_profit - entry_price) / entry_price * 100
@@ -235,25 +257,44 @@ class AdvancedMarketAI:
         
         return ai_signal
 
-    def _analyze_market_stability(self, asset_data: Dict, historical_data: List) -> Dict[str, float]:
+    def _analyze_market_stability(self, asset_data: Dict, historical_data: List, comprehensive_data: Dict = None) -> Dict[str, float]:
         """تحليل استقرار السوق"""
         
-        # محاكاة تحليل استقرار متطور
-        trend_info = asset_data.get('trend', {})
-        trend_strength = trend_info.get('strength', 50)
-        
-        # استقرار بناءً على قوة الاتجاه
-        if trend_strength > 80:
-            stability_score = 0.9  # مستقر جداً
-        elif trend_strength > 60:
-            stability_score = 0.8  # مستقر
-        elif trend_strength > 40:
-            stability_score = 0.6  # متوسط
+        # استخدام التحليل الشامل إذا كان متوفراً
+        if comprehensive_data and comprehensive_data.get('signal_quality'):
+            signal_quality = comprehensive_data['signal_quality']
+            stability_score = signal_quality.get('overall_score', 0.5)
+            
+            # تحسين الاستقرار بناءً على التحليل الشامل
+            if comprehensive_data.get('support_resistance_analysis'):
+                sr_strength = comprehensive_data['support_resistance_analysis'].get('support_strength', 0)
+                if sr_strength >= 3:
+                    stability_score += 0.1
+            
+            if comprehensive_data.get('breakout_analysis'):
+                breakout_reliability = comprehensive_data['breakout_analysis'].get('reliability', 'low')
+                if breakout_reliability == 'high':
+                    stability_score += 0.15
+                elif breakout_reliability == 'medium':
+                    stability_score += 0.05
         else:
-            stability_score = 0.3  # غير مستقر
+            # التحليل التقليدي
+            trend_info = asset_data.get('trend', {})
+            trend_strength = trend_info.get('strength', 50)
+            
+            # استقرار بناءً على قوة الاتجاه
+            if trend_strength > 80:
+                stability_score = 0.9  # مستقر جداً
+            elif trend_strength > 60:
+                stability_score = 0.8  # مستقر
+            elif trend_strength > 40:
+                stability_score = 0.6  # متوسط
+            else:
+                stability_score = 0.3  # غير مستقر
+            
+            # إضافة عامل عشوائي للواقعية
+            stability_score += random.uniform(-0.1, 0.1)
         
-        # إضافة عامل عشوائي للواقعية
-        stability_score += random.uniform(-0.1, 0.1)
         stability_score = max(0, min(1, stability_score))
         
         return {
@@ -261,7 +302,7 @@ class AdvancedMarketAI:
             'is_stable': stability_score >= self.min_stability_score
         }
 
-    def _analyze_trend_clarity(self, asset_data: Dict, trend_info: Dict) -> Dict[str, Any]:
+    def _analyze_trend_clarity(self, asset_data: Dict, trend_info: Dict, comprehensive_data: Dict = None) -> Dict[str, Any]:
         """تحليل وضوح الاتجاه"""
         
         current_trend = trend_info.get('trend', 'sideways')
@@ -290,7 +331,7 @@ class AdvancedMarketAI:
             'is_clear': clarity_score >= self.min_clarity_score and current_trend != 'sideways'
         }
 
-    def _analyze_volatility_levels(self, asset_data: Dict) -> Dict[str, float]:
+    def _analyze_volatility_levels(self, asset_data: Dict, comprehensive_data: Dict = None) -> Dict[str, float]:
         """تحليل مستويات التقلب"""
         
         # محاكاة تحليل التقلبات
@@ -301,7 +342,7 @@ class AdvancedMarketAI:
             'is_acceptable': volatility_level <= self.max_volatility_level
         }
 
-    def _analyze_indicators_consensus(self, asset_data: Dict) -> Dict[str, float]:
+    def _analyze_indicators_consensus(self, asset_data: Dict, comprehensive_data: Dict = None) -> Dict[str, float]:
         """تحليل توافق المؤشرات"""
         
         # محاكاة توافق المؤشرات الفنية
@@ -412,21 +453,55 @@ class AdvancedMarketAI:
         
         return max(0.85, min(0.99, final_confidence))
 
-    def _generate_ai_reasoning(self, analysis: MarketAnalysis, signal_type: str, 
-                             risk_reward_ratio: float) -> str:
+    def _generate_enhanced_ai_reasoning(self, analysis: MarketAnalysis, signal_type: str, 
+                                      risk_reward_ratio: float, comprehensive_data: Dict = None) -> str:
         """توليد التفسير الذكي للإشارة"""
         
         stability_text = "مستقر" if analysis.stability_score > 0.8 else "مقبول"
         clarity_text = "واضح جداً" if analysis.clarity_score > 0.9 else "واضح"
         
-        reasoning = (
-            f"نظام ذكاء اصطناعي متطور v{self.version}: "
+        # أساس التفسير
+        base_reasoning = (
+            f"ذكاء اصطناعي متطور v{self.version}: "
             f"السوق {stability_text} ({analysis.stability_score*100:.0f}%) - "
             f"اتجاه {analysis.trend_direction} {clarity_text} ({analysis.clarity_score*100:.0f}%) - "
             f"توافق مؤشرات {analysis.indicators_consensus*100:.0f}% - "
-            f"نسبة مخاطرة ممتازة {risk_reward_ratio:.1f}:1 → "
-            f"إشارة {signal_type} مضمونة بالذكاء الاصطناعي"
+            f"نسبة مخاطرة ممتازة {risk_reward_ratio:.1f}:1"
         )
+        
+        # إضافة تفاصيل التحليل الشامل
+        enhanced_details = []
+        
+        if comprehensive_data:
+            # تفاصيل الدعم والمقاومة
+            if comprehensive_data.get('support_resistance_analysis'):
+                sr_data = comprehensive_data['support_resistance_analysis']
+                if sr_data.get('nearest_support') or sr_data.get('nearest_resistance'):
+                    enhanced_details.append("مستويات دعم/مقاومة مؤكدة")
+            
+            # تفاصيل الأنماط
+            if comprehensive_data.get('candlestick_patterns'):
+                patterns = comprehensive_data['candlestick_patterns']
+                if patterns.get('pattern_count', 0) > 0:
+                    enhanced_details.append(f"{patterns['pattern_count']} أنماط مكتشفة")
+            
+            # تفاصيل الكسر
+            if comprehensive_data.get('breakout_analysis'):
+                breakout = comprehensive_data['breakout_analysis']
+                if breakout.get('reliability') == 'high':
+                    enhanced_details.append("كسر موثوق مؤكد")
+            
+            # تفاصيل الانعكاسات
+            if comprehensive_data.get('reversal_signals'):
+                reversals = comprehensive_data['reversal_signals']
+                if reversals.get('reversal_count', 0) > 0:
+                    enhanced_details.append("إشارات انعكاس مكتشفة")
+        
+        # تجميع التفسير النهائي
+        if enhanced_details:
+            reasoning = f"{base_reasoning} + {' + '.join(enhanced_details)} → إشارة {signal_type} مضمونة بالتحليل الشامل"
+        else:
+            reasoning = f"{base_reasoning} → إشارة {signal_type} مضمونة بالذكاء الاصطناعي"
         
         return reasoning
 
