@@ -36,12 +36,12 @@ def load_user(user_id):
 # Initialize SocketIO for rock-solid stability
 socketio = SocketIO(app, 
                    cors_allowed_origins="*", 
-                   ping_timeout=600,       # 10 minutes timeout - very stable
-                   ping_interval=120,      # 2 minutes ping interval
+                   ping_timeout=60,        # دقيقة واحدة للاستجابة السريعة
+                   ping_interval=25,       # 25 ثانية للتحديث السريع
                    logger=True,            # Enable logging to debug issues
                    engineio_logger=True,   # Enable engine logging
                    async_mode='threading', # Use threading
-                   transports=['polling'], # Only polling for stability
+                   transports=['polling', 'websocket'], # دعم WebSocket للسرعة
                    always_connect=True,    # Always try to connect
                    cookie=False)           # Disable cookies to avoid session issues
 
@@ -460,12 +460,11 @@ def price_monitor():
                 else:
                     price_monitor.cycle_count = 1
                 
-                # Send price updates only every 3rd cycle (every 30-45 seconds)
-                if price_monitor.cycle_count % 3 == 0:
-                    socketio.emit('price_update', prices)
+                # إرسال تحديثات الأسعار فورياً في كل دورة
+                socketio.emit('price_update', prices)
                 
-                # Send system status only every 6th cycle (every 60-90 seconds)
-                if price_monitor.cycle_count % 6 == 0:
+                # إرسال حالة النظام كل 3 دورات (كل 10-15 ثانية)
+                if price_monitor.cycle_count % 3 == 0:
                     status = price_service.get_system_status()
                     socketio.emit('system_status', status)
             
@@ -484,9 +483,9 @@ def price_monitor():
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        # Ultra-stable sleep time for rock-solid connections
+        # سرعة محسنة للحصول على بيانات فورية
         processing_time = time.time() - start_time
-        sleep_time = max(10, 15 - processing_time)  # Much slower but extremely stable (10-15 seconds)
+        sleep_time = max(2, 5 - processing_time)  # تحديث كل 2-5 ثواني للسرعة
         time.sleep(sleep_time)
 
 # Start background price monitoring
