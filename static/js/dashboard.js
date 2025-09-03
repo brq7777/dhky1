@@ -974,8 +974,8 @@ ${data.message}`, 'success');
         
         console.log('Signal displayed successfully for:', signal.asset_id);
         
-        // Start countdown (2 minutes = 120 seconds)
-        this.startSignalCountdown(signal.asset_id, countdownSpan, 120);
+        // Start countdown (1 minute = 60 seconds)
+        this.startSignalCountdown(signal.asset_id, countdownSpan, 60);
         
         // Flash the parent row
         const assetRow = signalArea.closest('.asset-row');
