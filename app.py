@@ -8,6 +8,7 @@ import threading
 import time
 from api_service import PriceService
 from market_ai_engine import analyze_asset_with_ai, get_ai_engine_status
+from comprehensive_trades_tracker import trades_tracker
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -488,6 +489,13 @@ def price_monitor():
             # Generate trading signals - optimized frequency
             signals = price_service.generate_trading_signals_fast(prices)
             for signal in signals:
+                # تتبع الإشارة الجديدة
+                try:
+                    trade_id = trades_tracker.track_new_signal(signal)
+                    signal['trade_id'] = trade_id  # إضافة معرف التتبع للإشارة
+                except Exception as e:
+                    logging.error(f"Error tracking signal: {e}")
+                
                 socketio.emit('trading_signal', signal)
                 logging.info(f"Trading signal: {signal['type']} {signal['asset_name']} at {signal['price']}")
             
@@ -498,6 +506,49 @@ def price_monitor():
         processing_time = time.time() - start_time
         sleep_time = max(1, 2 - processing_time)  # تحديث كل 1-2 ثانية للسرعة القصوى
         time.sleep(sleep_time)
+
+# API للحصول على إحصائيات الصفقات
+@app.route('/api/trades-stats')
+def get_trades_stats():
+    """إحصائيات الصفقات الشاملة"""
+    try:
+        stats = trades_tracker.get_comprehensive_stats(30)
+        recommendations = trades_tracker.generate_ai_recommendations()
+        daily_performance = trades_tracker.update_daily_performance()
+        
+        return jsonify({
+            'success': True,
+            'stats': stats,
+            'recommendations': recommendations,
+            'daily_performance': daily_performance
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+@app.route('/api/finalize-trade', methods=['POST'])
+def finalize_trade():
+    """إنهاء صفقة وتحديد نتيجتها"""
+    try:
+        data = request.get_json()
+        trade_id = data.get('trade_id')
+        exit_price = data.get('exit_price')
+        is_winning = data.get('is_winning', True)
+        analysis = data.get('analysis')
+        
+        trades_tracker.finalize_trade(trade_id, exit_price, is_winning, analysis)
+        
+        return jsonify({
+            'success': True,
+            'message': 'تم إنهاء الصفقة بنجاح'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
 
 # Start background price monitoring
 price_monitor_thread = threading.Thread(target=price_monitor, daemon=True)

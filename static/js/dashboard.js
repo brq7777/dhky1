@@ -1189,6 +1189,70 @@ class TradingDashboard {
             systemAccuracyElement.textContent = typeof accuracy === 'number' ? `${accuracy}%` : accuracy;
         }
     }
+    
+    // تحديث إحصائيات الصفقات
+    async updateTradesStatistics() {
+        try {
+            const response = await fetch('/api/trades-stats');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayTradesStats(data.stats);
+                this.displayLearningInsights(data.recommendations);
+                this.displayRecommendations(data.recommendations);
+            }
+        } catch (error) {
+            console.log('Error fetching trades statistics:', error);
+        }
+    }
+    
+    displayTradesStats(stats) {
+        // تحديث العدادات
+        const successCount = document.getElementById('success-count');
+        const lossCount = document.getElementById('loss-count');
+        const successRate = document.getElementById('success-rate');
+        const lossRate = document.getElementById('loss-rate');
+        const avgProfit = document.getElementById('avg-profit');
+        const avgConfidence = document.getElementById('avg-confidence');
+        
+        if (successCount) successCount.textContent = stats.winning_trades || '0';
+        if (lossCount) lossCount.textContent = stats.losing_trades || '0';
+        if (successRate) successRate.textContent = `${stats.success_rate || 0}%`;
+        if (lossRate) lossRate.textContent = `${stats.loss_rate || 0}%`;
+        if (avgProfit) avgProfit.textContent = `${stats.avg_profit || 0}%`;
+        if (avgConfidence) avgConfidence.textContent = `${stats.avg_confidence || 0}%`;
+    }
+    
+    displayLearningInsights(recommendations) {
+        const insightsContainer = document.getElementById('learning-insights');
+        
+        if (insightsContainer) {
+            if (recommendations && recommendations.learning_insights) {
+                insightsContainer.innerHTML = recommendations.learning_insights
+                    .map(insight => `<div class="insight-item">${insight}</div>`)
+                    .join('');
+            } else {
+                insightsContainer.innerHTML = '<div class="insight-loading">جاري تحليل أنماط النجاح والفشل...</div>';
+            }
+        }
+    }
+    
+    displayRecommendations(recommendations) {
+        const recommendationsContainer = document.getElementById('recommendations-list');
+        
+        if (recommendationsContainer) {
+            if (recommendations && recommendations.improvement_suggestions) {
+                recommendationsContainer.innerHTML = recommendations.improvement_suggestions
+                    .map(rec => `
+                        <div class="recommendation-item recommendation-priority-${rec.priority || 'medium'}">
+                            ${rec.text || rec}
+                        </div>
+                    `).join('');
+            } else {
+                recommendationsContainer.innerHTML = '<div class="recommendation-loading">جاري إعداد التوصيات...</div>';
+            }
+        }
+    }
 }
 
 // Initialize dashboard when page loads
@@ -1198,5 +1262,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize AI analysis after dashboard
     if (dashboard.initializeAIAnalysis) {
         dashboard.initializeAIAnalysis();
+    }
+    
+    // تحديث إحصائيات الصفقات فورياً ثم كل 30 ثانية
+    if (dashboard.updateTradesStatistics) {
+        dashboard.updateTradesStatistics();
+        setInterval(() => {
+            dashboard.updateTradesStatistics();
+        }, 30000);
     }
 });

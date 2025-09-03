@@ -84,6 +84,62 @@
                     </div>
                 </div>
                 
+                <!-- إحصائيات الصفقات الناجحة والخاسرة -->
+                <div class="analysis-item full-width">
+                    <h5>📈 إحصائيات الصفقات المتقدمة</h5>
+                    <div class="trades-statistics" id="trades-stats">
+                        <div class="stats-grid">
+                            <div class="stat-card success">
+                                <div class="stat-icon">✅</div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="success-count">-</span>
+                                    <span class="stat-label">صفقات ناجحة</span>
+                                    <span class="stat-percentage" id="success-rate">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card failure">
+                                <div class="stat-icon">❌</div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="loss-count">-</span>
+                                    <span class="stat-label">صفقات خاسرة</span>
+                                    <span class="stat-percentage" id="loss-rate">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card profit">
+                                <div class="stat-icon">💰</div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="avg-profit">-</span>
+                                    <span class="stat-label">متوسط الربح</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card confidence">
+                                <div class="stat-icon">🎯</div>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="avg-confidence">-</span>
+                                    <span class="stat-label">متوسط الثقة</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ai-learning-section">
+                            <h6>🤖 التعلم الذكي</h6>
+                            <div class="learning-insights" id="learning-insights">
+                                <div class="insight-loading">جاري تحليل أنماط النجاح والفشل...</div>
+                            </div>
+                            
+                            <div class="recommendations" id="ai-recommendations">
+                                <h6>💡 توصيات التحسين</h6>
+                                <div class="recommendations-list" id="recommendations-list">
+                                    <div class="recommendation-loading">جاري إعداد التوصيات...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="analysis-item">
                     <h5>⚡ إحصائيات الإشارات</h5>
                     <div class="signal-stats" id="signal-stats">

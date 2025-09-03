@@ -1618,3 +1618,134 @@ body.theme-light-blue .asset-row:hover {
 .ai-chat-messages::-webkit-scrollbar-thumb:hover {
     background: #888;
 }
+
+/* إحصائيات الصفقات */
+.trades-statistics {
+    margin-top: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card.success {
+    border-color: rgba(39, 174, 96, 0.3);
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.1), rgba(39, 174, 96, 0.05));
+}
+
+.stat-card.failure {
+    border-color: rgba(231, 76, 60, 0.3);
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(231, 76, 60, 0.05));
+}
+
+.stat-card.profit {
+    border-color: rgba(241, 196, 15, 0.3);
+    background: linear-gradient(135deg, rgba(241, 196, 15, 0.1), rgba(241, 196, 15, 0.05));
+}
+
+.stat-card.confidence {
+    border-color: rgba(155, 89, 182, 0.3);
+    background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(155, 89, 182, 0.05));
+}
+
+.stat-icon {
+    font-size: 24px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.stat-percentage {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-color);
+}
+
+.ai-learning-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-learning-section h6 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.learning-insights, .recommendations-list {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+
+.insight-loading, .recommendation-loading {
+    color: rgba(255, 255, 255, 0.6);
+    text-align: center;
+    padding: 10px;
+    font-style: italic;
+}
+
+.recommendation-item {
+    background: rgba(74, 144, 226, 0.1);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--accent-color);
+}
+
+.recommendation-priority-high {
+    border-left-color: #e74c3c;
+}
+
+.recommendation-priority-medium {
+    border-left-color: #f39c12;
+}
+
+.recommendation-priority-low {
+    border-left-color: #27ae60;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}

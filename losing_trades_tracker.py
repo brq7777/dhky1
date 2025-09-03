@@ -115,7 +115,7 @@ class LosingTradesTracker:
             signal_data.get('price_change_5'),
             signal_data.get('trend'),
             signal_data.get('volatility'),
-            session_id or f"session_{int(time.time())}"
+            session_id if session_id is not None else f"session_{int(time.time())}"
         ))
         
         trade_id = cursor.lastrowid
@@ -123,7 +123,7 @@ class LosingTradesTracker:
         conn.close()
         
         logging.info(f"تتبع إشارة جديدة: {signal_data.get('asset_id')} - ID: {trade_id}")
-        return trade_id
+        return trade_id if trade_id is not None else 0
     
     def mark_as_losing_trade(self, trade_id: int, exit_price: float, 
                            failure_analysis: Dict[str, Any] = None):
@@ -179,7 +179,8 @@ class LosingTradesTracker:
         conn.close()
         
         # تحديث أنماط الفشل
-        self._update_failure_patterns(failure_analysis)
+        if failure_analysis is not None:
+            self._update_failure_patterns(failure_analysis)
         
         logging.info(f"تم تحديد الصفقة {trade_id} كخاسرة: خسارة {loss_percentage:.2f}%")
         
