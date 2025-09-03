@@ -480,3 +480,27 @@ class AITradingAnalyzer:
         """إعادة تعيين ذاكرة المحادثة"""
         self.conversation_memory = []
         logging.info("تم إعادة تعيين ذاكرة المحادثة")
+    
+    def get_ai_learning_stats(self) -> Dict:
+        """الحصول على إحصائيات نظام التعلم الذكي"""
+        try:
+            return {
+                'ai_enabled': True,
+                'model': self.model,
+                'conversation_count': len(self.conversation_memory),
+                'status': 'متصل',
+                'last_updated': datetime.now().isoformat(),
+                'features': {
+                    'market_analysis': self.analysis_settings.get('market_analysis_enabled', True),
+                    'technical_indicators': self.analysis_settings.get('technical_indicators', True),
+                    'sentiment_analysis': self.analysis_settings.get('sentiment_analysis', True),
+                    'risk_assessment': self.analysis_settings.get('risk_assessment', True)
+                }
+            }
+        except Exception as e:
+            logging.error(f"خطأ في إحصائيات AI: {str(e)}")
+            return {
+                'ai_enabled': False,
+                'error': str(e),
+                'status': 'خطأ'
+            }

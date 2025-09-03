@@ -227,7 +227,7 @@ def ai_chat():
         client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
         response = client.chat.completions.create(
-            model="gpt-4o-mini",  # استخدام النموذج الأكثر فعالية
+            model="gpt-5",  # استخدام أحدث نموذج GPT-5
             messages=[
                 {
                     "role": "system", 
@@ -238,8 +238,7 @@ def ai_chat():
                     "content": user_message
                 }
             ],
-            max_tokens=400,
-            temperature=0.7
+            max_completion_tokens=400
         )
         
         ai_response = response.choices[0].message.content
