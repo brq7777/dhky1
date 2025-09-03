@@ -25,6 +25,7 @@ class TradingDashboard {
     }
     
     init() {
+        this.setupErrorHandlers();
         this.initializeSocket();
         this.renderSections();
         this.initializeAudio();
@@ -33,6 +34,18 @@ class TradingDashboard {
         this.addSignalsPanel();
         this.initializeThemeSelector();
         this.applyTheme(this.selectedTheme);
+    }
+    
+    setupErrorHandlers() {
+        // معالجة أخطاء JavaScript
+        window.addEventListener('unhandledrejection', event => {
+            console.warn('Promise rejection handled:', event.reason);
+            event.preventDefault();
+        });
+        
+        window.addEventListener('error', event => {
+            console.warn('JavaScript error handled:', event.error?.message || event.message);
+        });
     }
     
     initializeSocket() {
@@ -203,7 +216,7 @@ class TradingDashboard {
             const priceElement = document.querySelector(`[data-price-id="${assetId}"]`);
             const trendElement = document.querySelector(`[data-trend-id="${assetId}"]`);
             
-            if (priceElement) {
+            if (priceElement && prices[assetId] && prices[assetId].price !== undefined) {
                 const price = prices[assetId].price;
                 priceElement.textContent = this.formatPrice(price, assetId);
                 priceElement.className = 'price';
@@ -257,7 +270,8 @@ class TradingDashboard {
     }
     
     formatPrice(price, assetId) {
-        if (assetId.includes('USDT')) {
+        // التحقق من وجود assetId وأنه نص صحيح
+        if (assetId && typeof assetId === 'string' && assetId.includes('USDT')) {
             return `$${parseFloat(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         } else {
             return parseFloat(price).toFixed(4);
@@ -819,8 +833,9 @@ ${data.message}`, 'success');
             }
         })
         .catch(error => {
-            console.warn('OpenAI test failed:', error.message || error);
-            this.showNotification(`❌ خطأ في اختبار OpenAI: ${error.message}`, 'error');
+            const errorMessage = error?.message || error?.toString() || 'خطأ غير معروف';
+            console.warn('OpenAI test failed:', errorMessage);
+            this.showNotification(`❌ خطأ في اختبار OpenAI: ${errorMessage}`, 'error');
             testBtn.textContent = '❌ خطأ';
             testBtn.style.backgroundColor = '#ef4444';
         })
