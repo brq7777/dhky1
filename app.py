@@ -381,9 +381,8 @@ def handle_connect():
     """Handle client connection with session management"""
     from flask import session
     try:
-        # Use Flask-SocketIO's request object instead of Flask's
-        from flask_socketio import request as socketio_request
-        client_id = socketio_request.sid if hasattr(socketio_request, 'sid') else 'default'
+        # Use Flask-SocketIO session
+        client_id = session.get('client_id', 'default')
     except:
         client_id = 'default'
     logging.info(f'Client connected: {client_id}')
@@ -406,9 +405,8 @@ def handle_connect():
 def handle_disconnect():
     """Handle client disconnection with cleanup"""
     try:
-        # Use Flask-SocketIO's request object instead of Flask's
-        from flask_socketio import request as socketio_request
-        client_id = socketio_request.sid if hasattr(socketio_request, 'sid') else 'default'
+        # Use Flask-SocketIO session
+        client_id = session.get('client_id', 'default')
     except:
         client_id = 'default'
     logging.info(f'Client disconnected: {client_id}')
