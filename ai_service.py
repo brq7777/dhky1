@@ -481,6 +481,63 @@ class AITradingAnalyzer:
         self.conversation_memory = []
         logging.info("تم إعادة تعيين ذاكرة المحادثة")
     
+    def process_chat_message(self, user_message: str, current_prices: Dict = None) -> str:
+        """معالجة رسالة الدردشة مع البيانات الحية"""
+        try:
+            # بناء context للمحادثة مع معلومات السوق
+            market_context = f"""
+أنت مساعد ذكي متخصص في التحليل المالي والاستثمار. 
+
+البيانات الحالية للسوق:
+"""
+            
+            if current_prices:
+                for asset_id, price_info in current_prices.items():
+                    if isinstance(price_info, dict) and 'price' in price_info:
+                        price = price_info['price']
+                        change = price_info.get('price_change_24h', 0)
+                        change_text = f"+{change:.2f}%" if change > 0 else f"{change:.2f}%"
+                        market_context += f"- {price_info.get('name', asset_id)}: {price:.2f} ({change_text})\n"
+            
+            market_context += f"""
+تعليمات:
+- أجب باللغة العربية دائماً
+- قدم نصائح مالية عامة وليس نصائح استثمارية شخصية
+- كن مفيداً وودوداً
+- اذكر المخاطر عند الحاجة
+- استخدم الرموز التعبيرية بشكل معتدل
+- أجب بإيجاز (أقل من 300 كلمة)
+
+سؤال المستخدم: {user_message}
+"""
+            
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": market_context},
+                    {"role": "user", "content": user_message}
+                ],
+                max_completion_tokens=800,
+                temperature=0.7
+            )
+            
+            ai_response = response.choices[0].message.content
+            if ai_response:
+                ai_response = ai_response.strip()
+                # إضافة الرسالة إلى الذاكرة
+                self.conversation_memory.append({
+                    'user': user_message,
+                    'assistant': ai_response,
+                    'timestamp': datetime.now().isoformat()
+                })
+                return ai_response
+            else:
+                return "عذراً، لم أتمكن من الحصول على إجابة مناسبة."
+                
+        except Exception as e:
+            logging.error(f"خطأ في معالجة رسالة الدردشة: {str(e)}")
+            return f"عذراً، حدث خطأ تقني: {str(e)}"
+    
     def get_ai_learning_stats(self) -> Dict:
         """الحصول على إحصائيات نظام التعلم الذكي"""
         try:

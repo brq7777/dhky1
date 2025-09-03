@@ -192,58 +192,8 @@ def ai_chat():
         # الحصول على البيانات الحالية للسوق
         current_prices = price_service.get_all_prices()
         
-        # بناء context للمحادثة مع معلومات السوق
-        market_context = f"""
-أنت مساعد ذكي متخصص في التحليل المالي والاستثمار. 
-
-البيانات الحالية للسوق:
-"""
-        
-        for asset_id, price_info in current_prices.items():
-            if isinstance(price_info, dict) and 'price' in price_info:
-                price = price_info['price']
-                change = price_info.get('price_change_24h', 0)
-                change_text = f"+{change:.2f}%" if change > 0 else f"{change:.2f}%"
-                market_context += f"- {price_info.get('name', asset_id)}: {price:.2f} ({change_text})\n"
-        
-        market_context += f"""
-تعليمات:
-- أجب باللغة العربية دائماً
-- قدم نصائح مالية عامة وليس نصائح استثمارية شخصية
-- كن مفيداً وودوداً
-- اذكر المخاطر عند الحاجة
-- استخدم الرموز التعبيرية بشكل معتدل
-- أجب بإيجاز (أقل من 300 كلمة)
-
-سؤال المستخدم: {user_message}
-"""
-        
-        # إرسال الطلب إلى OpenAI
-        from openai import OpenAI
-        import os
-        
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        
-        response = client.chat.completions.create(
-            model="gpt-5",  # استخدام أحدث نموذج GPT-5
-            messages=[
-                {
-                    "role": "system", 
-                    "content": market_context
-                },
-                {
-                    "role": "user", 
-                    "content": user_message
-                }
-            ],
-            max_completion_tokens=400
-        )
-        
-        ai_response = response.choices[0].message.content
-        if ai_response:
-            ai_response = ai_response.strip()
-        else:
-            ai_response = "عذراً، لم أتمكن من الحصول على إجابة مناسبة."
+        # استخدام نظام AI المحسن
+        ai_response = price_service.ai_analyzer.process_chat_message(user_message, current_prices)
         
         return jsonify({
             'success': True,
@@ -259,6 +209,28 @@ def ai_chat():
             'success': False,
             'error': f'حدث خطأ: {str(e)}'
         })
+
+@app.route('/api/test-signal/<asset_id>')
+def test_signal(asset_id):
+    """إنشاء إشارة اختبارية للتجربة"""
+    signal = {
+        'asset_id': asset_id,
+        'asset_name': asset_id,
+        'type': 'BUY',
+        'price': 50000,
+        'confidence': 95,
+        'timestamp': time.time(),
+        'reason': 'اختبار الإشارة'
+    }
+    
+    # إرسال إشارة اختبارية
+    socketio.emit('trading_signal', signal)
+    
+    return jsonify({
+        'success': True,
+        'message': f'تم إرسال إشارة اختبارية لـ {asset_id}',
+        'signal': signal
+    })
 
 # مسارات المصادقة
 @app.route('/login', methods=['GET', 'POST'])
