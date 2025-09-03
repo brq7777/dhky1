@@ -7,6 +7,7 @@ from typing import Dict, List, Optional, Any
 import requests
 import random
 from advanced_technical_analysis import SmartTechnicalAnalyzer, MarketState
+from real_market_data import real_market_service
 
 try:
     from market_ai_engine import analyze_asset_with_ai
@@ -188,19 +189,48 @@ class PriceService:
         return self.get_all_prices()
     
     def _update_sample_prices(self):
-        """تحديث الأسعار العينة"""
+        """تحديث الأسعار - مع دمج البيانات الحقيقية"""
         current_time = time.time()
         
-        for asset_id in self.price_cache:
-            if asset_id in self.price_cache:
-                old_price = self.price_cache[asset_id]['price']
-                # تغيير صغير في السعر
-                change = random.uniform(-0.005, 0.005)
-                new_price = old_price * (1 + change)
-                
-                self.price_cache[asset_id]['price'] = new_price
-                self.price_cache[asset_id]['timestamp'] = current_time
-                self.price_cache[asset_id]['trend'] = self._calculate_trend(asset_id)
+        # محاولة الحصول على أسعار حقيقية
+        try:
+            real_prices = real_market_service.get_all_real_prices(self.assets)
+            
+            for asset_id in self.price_cache:
+                if asset_id in real_prices and real_prices[asset_id]['source'] == 'real_market':
+                    # استخدام السعر الحقيقي
+                    self.price_cache[asset_id]['price'] = real_prices[asset_id]['price']
+                    self.price_cache[asset_id]['timestamp'] = current_time
+                    self.price_cache[asset_id]['source'] = 'real_api'
+                    self.price_cache[asset_id]['trend'] = self._calculate_trend(asset_id)
+                    logging.debug(f"✅ سعر حقيقي محدث: {asset_id} = {real_prices[asset_id]['price']}")
+                else:
+                    # استخدام التحديث المحاكي كبديل
+                    if asset_id in self.price_cache:
+                        old_price = self.price_cache[asset_id]['price']
+                        # تغيير صغير في السعر
+                        change = random.uniform(-0.005, 0.005)
+                        new_price = old_price * (1 + change)
+                        
+                        self.price_cache[asset_id]['price'] = new_price
+                        self.price_cache[asset_id]['timestamp'] = current_time
+                        self.price_cache[asset_id]['source'] = 'simulated'
+                        self.price_cache[asset_id]['trend'] = self._calculate_trend(asset_id)
+        
+        except Exception as e:
+            logging.warning(f"فشل تحديث الأسعار الحقيقية، استخدام المحاكاة: {e}")
+            # العودة للطريقة الأصلية
+            for asset_id in self.price_cache:
+                if asset_id in self.price_cache:
+                    old_price = self.price_cache[asset_id]['price']
+                    # تغيير صغير في السعر
+                    change = random.uniform(-0.005, 0.005)
+                    new_price = old_price * (1 + change)
+                    
+                    self.price_cache[asset_id]['price'] = new_price
+                    self.price_cache[asset_id]['timestamp'] = current_time
+                    self.price_cache[asset_id]['source'] = 'simulated'
+                    self.price_cache[asset_id]['trend'] = self._calculate_trend(asset_id)
     
     def get_price(self, asset_id: str) -> Optional[Dict[str, Any]]:
         """الحصول على سعر أصل واحد"""
@@ -208,9 +238,18 @@ class PriceService:
     
     def get_system_status(self) -> Dict[str, Any]:
         """الحصول على حالة النظام"""
+        # فحص نوع مصادر البيانات
+        real_count = sum(1 for asset in self.price_cache.values() if asset.get('source') == 'real_api')
+        simulated_count = len(self.price_cache) - real_count
+        
+        data_mode = 'real_market_data' if real_count > 0 else 'simulated_data'
+        
         return {
             'status': 'operational',
-            'mode': 'independent_technical_analysis',
+            'mode': 'advanced_analysis_with_real_data',
+            'data_source': data_mode,
+            'real_prices': real_count,
+            'simulated_prices': simulated_count,
             'offline_mode': False,
             'last_update': time.time(),
             'total_assets': len(self.assets),
