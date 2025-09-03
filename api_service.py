@@ -382,8 +382,9 @@ class PriceService:
             if asset_id in self.trend_analysis:
                 trend_data = self.trend_analysis[asset_id]
                 # منع الإشارات إذا كان السوق متذبذب بشدة
-                if trend_data.get('trend') == 'volatile' or trend_data.get('volatility', 0) > 5:
-                    logging.info(f"منع إشارة {asset_id} بسبب التذبذب العالي")
+                volatility = trend_data.get('volatility', 0)
+                if trend_data.get('trend') == 'volatile' or volatility > 5:
+                    logging.info(f"منع إشارة {asset_id} بسبب التذبذب العالي: {volatility}%")
                     continue
             
             # استخدام نظام الذكاء الاصطناعي المحسن

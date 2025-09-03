@@ -861,8 +861,12 @@ ${data.message}`, 'success');
     handleTradingSignal(signal) {
         console.log('Trading signal received:', signal);
         
-        // Play sound for signal
-        this.playAlertSound({ frequency: signal.type === 'BUY' ? 1000 : 600, duration: 300 });
+        try {
+            // Play sound for signal
+            this.playAlertSound({ frequency: signal.type === 'BUY' ? 1000 : 600, duration: 300 });
+        } catch (error) {
+            console.error('Error playing alert sound:', error);
+        }
         
         // Display signal inline with asset
         this.displayInlineSignal(signal);
@@ -875,11 +879,27 @@ ${data.message}`, 'success');
         
         const message = `🚨 إشارة ${signal.type}\n${signal.asset_name}\nالسعر: ${this.formatPrice(signal.price, signal.asset_id)}\nالثقة: ${signal.confidence}%\n${signal.reason}${technicalDetails}`;
         
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(`إشارة ${signal.type} - ${signal.asset_name}`, {
-                body: message,
-                icon: '/static/favicon.ico'
-            });
+        // Show desktop notification if supported
+        try {
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification(`إشارة ${signal.type} - ${signal.asset_name}`, {
+                        body: message,
+                        icon: '/static/favicon.ico'
+                    });
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification(`إشارة ${signal.type} - ${signal.asset_name}`, {
+                                body: message,
+                                icon: '/static/favicon.ico'
+                            });
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error showing notification:', error);
         }
     }
     
