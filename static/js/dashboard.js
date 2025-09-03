@@ -51,15 +51,15 @@ class TradingDashboard {
     initializeSocket() {
         // Initialize with polling-only for maximum stability
         this.socket = io({
-            timeout: 30000,             // تقليل وقت الانتظار لـ 30 ثانية
+            timeout: 20000,             // تقليل وقت الانتظار لـ 20 ثانية للسرعة
             reconnection: true,         // Enable auto-reconnection
-            reconnectionDelay: 2000,    // إعادة الاتصال خلال ثانيتين
-            reconnectionAttempts: 10,   // محاولات أكثر للاتصال
-            reconnectionDelayMax: 10000, // أقصى تأخير 10 ثوان
+            reconnectionDelay: 1000,    // إعادة الاتصال خلال ثانية واحدة
+            reconnectionAttempts: 15,   // محاولات أكثر للاتصال
+            reconnectionDelayMax: 5000, // أقصى تأخير 5 ثوان
             forceNew: true,             // Always create new connection
             transports: ['websocket', 'polling'], // دعم WebSocket أولاً للسرعة
             upgrade: true,              // تفعيل الترقية لـ WebSocket
-            rememberUpgrade: false,     // Always use polling
+            rememberUpgrade: true,      // تذكر الترقية للسرعة
             forceBase64: false,         // Use binary if possible
             timestampRequests: false    // Disable timestamps to reduce overhead
         });

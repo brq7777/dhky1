@@ -460,11 +460,11 @@ def price_monitor():
                 else:
                     price_monitor.cycle_count = 1
                 
-                # إرسال تحديثات الأسعار فورياً في كل دورة
+                # إرسال تحديثات الأسعار فورياً بدون تأخير
                 socketio.emit('price_update', prices)
                 
-                # إرسال حالة النظام كل 3 دورات (كل 10-15 ثانية)
-                if price_monitor.cycle_count % 3 == 0:
+                # إرسال حالة النظام كل دورتين (كل 3-6 ثوان)
+                if price_monitor.cycle_count % 2 == 0:
                     status = price_service.get_system_status()
                     socketio.emit('system_status', status)
             
@@ -483,9 +483,9 @@ def price_monitor():
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        # سرعة محسنة للحصول على بيانات فورية
+        # تحديث فوري للبيانات الحية
         processing_time = time.time() - start_time
-        sleep_time = max(2, 5 - processing_time)  # تحديث كل 2-5 ثواني للسرعة
+        sleep_time = max(1, 2 - processing_time)  # تحديث كل 1-2 ثانية للسرعة القصوى
         time.sleep(sleep_time)
 
 # Start background price monitoring
