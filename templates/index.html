@@ -58,40 +58,38 @@
             </section>
         </div>
 
-        <!-- AI Chat Section -->
-        <section class="card ai-chat-container">
-            <div class="ai-chat-header">
-                <h4>🤖 دردشة مع الذكاء الاصطناعي</h4>
+        <!-- AI Market Analysis Section -->
+        <section class="card ai-analysis-container">
+            <div class="ai-analysis-header">
+                <h4>🤖 التحليل الذكي للسوق</h4>
                 <div class="ai-status">
-                    <span id="ai-status-indicator" class="status-dot offline"></span>
-                    <span id="ai-status-text">غير متصل</span>
-                    <button id="test-openai-btn" class="sec-btn">🤖 اختبار OpenAI</button>
+                    <span id="ai-status-indicator" class="status-dot active"></span>
+                    <span id="ai-status-text">الذكاء الاصطناعي يحلل تلقائياً</span>
                 </div>
             </div>
             
-            <div class="ai-chat-messages" id="ai-chat-messages">
-                <div class="ai-message welcome-message">
-                    <div class="message-content">
-                        مرحباً! أنا مساعدك الذكي للتحليل المالي. يمكنني مساعدتك في تحليل الأسعار، تقديم نصائح الاستثمار، وتفسير إشارات السوق. اسألني أي شيء! 📈
+            <div class="market-analysis-grid">
+                <div class="analysis-item">
+                    <h5>📊 اتجاه السوق العام</h5>
+                    <div class="market-trend-display" id="market-trend-display">
+                        <span class="trend-icon">🔍</span>
+                        <span class="trend-text">جاري التحليل...</span>
+                        <span class="trend-strength"></span>
                     </div>
-                    <div class="message-time">الآن</div>
                 </div>
-            </div>
-            
-            <div class="ai-chat-input">
-                <div class="input-group">
-                    <input type="text" id="ai-chat-input" placeholder="اكتب سؤالك هنا..." maxlength="500">
-                    <button id="ai-send-btn" class="send-btn" disabled>
-                        <span class="send-icon">🚀</span>
-                        إرسال
-                    </button>
+                
+                <div class="analysis-item">
+                    <h5>🧠 الرؤى الذكية</h5>
+                    <div class="ai-insights" id="ai-insights">
+                        <div class="insight-item">النظام يحلل المؤشرات الفنية ويحسن الإشارات تلقائياً</div>
+                    </div>
                 </div>
-                <div class="typing-indicator" id="typing-indicator" style="display: none;">
-                    <span>الذكاء الاصطناعي يكتب</span>
-                    <div class="typing-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                
+                <div class="analysis-item">
+                    <h5>⚡ إحصائيات الإشارات</h5>
+                    <div class="signal-stats" id="signal-stats">
+                        <div class="stat-item">الإشارات اليوم: <span id="signals-today">0</span></div>
+                        <div class="stat-item">دقة النظام: <span id="system-accuracy">جاري الحساب</span></div>
                     </div>
                 </div>
             </div>

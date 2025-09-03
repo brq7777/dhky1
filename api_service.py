@@ -378,22 +378,32 @@ class PriceService:
                 if time_since_last < 20:  # Minimum 20 seconds between signals
                     continue
             
-            # استخدام نظام الذكاء الاصطناعي إذا كان متاحاً
+            # تحليل اتجاه السوق ومنع الإشارات في التذبذب العالي
+            if asset_id in self.trend_analysis:
+                trend_data = self.trend_analysis[asset_id]
+                # منع الإشارات إذا كان السوق متذبذب بشدة
+                if trend_data.get('trend') == 'volatile' or trend_data.get('volatility', 0) > 5:
+                    logging.info(f"منع إشارة {asset_id} بسبب التذبذب العالي")
+                    continue
+            
+            # استخدام نظام الذكاء الاصطناعي المحسن
             if self.ai_analyzer:
                 try:
                     ai_signal = self.ai_analyzer.analyze_market_with_ai(asset_id, price_data)
                     if ai_signal:
-                        signals.append(ai_signal)
-                        self.last_signal_time[asset_id] = current_time
-                        
-                        # Store in history
-                        if asset_id not in self.signals_history:
-                            self.signals_history[asset_id] = []
-                        self.signals_history[asset_id].append(ai_signal)
-                        
-                        # Keep only last 5 signals per asset for performance
-                        if len(self.signals_history[asset_id]) > 5:
-                            self.signals_history[asset_id] = self.signals_history[asset_id][-5:]
+                        # فلترة الإشارات الضعيفة
+                        if ai_signal.get('confidence', 0) >= 75:
+                            signals.append(ai_signal)
+                            self.last_signal_time[asset_id] = current_time
+                            
+                            # Store in history
+                            if asset_id not in self.signals_history:
+                                self.signals_history[asset_id] = []
+                            self.signals_history[asset_id].append(ai_signal)
+                            
+                            # Keep only last 5 signals per asset for performance
+                            if len(self.signals_history[asset_id]) > 5:
+                                self.signals_history[asset_id] = self.signals_history[asset_id][-5:]
                         
                         continue  # استخدم نظام AI فقط
                 except Exception as e:
@@ -519,6 +529,9 @@ class PriceService:
             trend_signals -= 2
         elif current_price < sma_5:
             trend_signals -= 1
+        
+        # حساب التذبذب
+        volatility = abs(price_change_20) if abs(price_change_20) > 0 else 1.0
         
         # تأكيد بـ RSI والزخم
         if price_change_20 > 2 and rsi > 60:
