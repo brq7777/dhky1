@@ -903,9 +903,196 @@ ${data.message}`, 'success');
         }
     }
     
+    // AI Chat functionality
+    initializeAIChat() {
+        const aiChatInput = document.getElementById('ai-chat-input');
+        const aiSendBtn = document.getElementById('ai-send-btn');
+        const testOpenAIBtn = document.getElementById('test-openai-btn');
+        
+        if (aiChatInput && aiSendBtn) {
+            // Enable/disable send button based on input
+            aiChatInput.addEventListener('input', () => {
+                const hasText = aiChatInput.value.trim().length > 0;
+                aiSendBtn.disabled = !hasText;
+            });
+            
+            // Send message on button click
+            aiSendBtn.addEventListener('click', () => {
+                this.sendAIMessage();
+            });
+            
+            // Send message on Enter key
+            aiChatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendAIMessage();
+                }
+            });
+        }
+        
+        // Test OpenAI connection
+        if (testOpenAIBtn) {
+            testOpenAIBtn.addEventListener('click', () => {
+                this.testOpenAIConnection();
+            });
+        }
+        
+        // Initial AI status check
+        this.updateAIStatus();
+    }
+    
+    async sendAIMessage() {
+        const aiChatInput = document.getElementById('ai-chat-input');
+        const aiSendBtn = document.getElementById('ai-send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        
+        const message = aiChatInput.value.trim();
+        if (!message) return;
+        
+        // Add user message to chat
+        this.addChatMessage(message, 'user');
+        
+        // Clear input and disable button
+        aiChatInput.value = '';
+        aiSendBtn.disabled = true;
+        
+        // Show typing indicator
+        typingIndicator.style.display = 'block';
+        
+        try {
+            const response = await fetch('/api/ai-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: message })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Add AI response to chat
+                this.addChatMessage(result.data.message, 'ai');
+            } else {
+                // Add error message
+                this.addChatMessage(`❌ ${result.error}`, 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error sending AI message:', error);
+            this.addChatMessage('❌ حدث خطأ في الاتصال مع الذكاء الاصطناعي', 'error');
+        } finally {
+            // Hide typing indicator
+            typingIndicator.style.display = 'none';
+        }
+    }
+    
+    addChatMessage(message, type) {
+        const chatMessages = document.getElementById('ai-chat-messages');
+        const messageDiv = document.createElement('div');
+        
+        const currentTime = new Date().toLocaleTimeString('ar-SA', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        if (type === 'user') {
+            messageDiv.className = 'user-message';
+            messageDiv.innerHTML = `
+                <div class="message-content">${message}</div>
+                <div class="message-time">${currentTime}</div>
+            `;
+        } else if (type === 'ai') {
+            messageDiv.className = 'ai-message';
+            messageDiv.innerHTML = `
+                <div class="message-content">${message}</div>
+                <div class="message-time">${currentTime}</div>
+            `;
+        } else if (type === 'error') {
+            messageDiv.className = 'error-message';
+            messageDiv.innerHTML = `
+                <div class="message-content">${message}</div>
+                <div class="message-time">${currentTime}</div>
+            `;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    async testOpenAIConnection() {
+        const testBtn = document.getElementById('test-openai-btn');
+        if (!testBtn) return;
+        
+        // Disable button during test
+        testBtn.disabled = true;
+        testBtn.textContent = '⏳ يتم الاختبار...';
+        
+        try {
+            const response = await fetch('/api/test-openai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success && result.data.connected) {
+                this.showNotification(`✅ OpenAI متصل بنجاح!`, 'success');
+                testBtn.textContent = '✅ متصل';
+                testBtn.style.backgroundColor = '#10b981';
+                this.updateAIStatus(true);
+            } else {
+                this.showNotification(`❌ فشل الاتصال مع OpenAI`, 'error');
+                testBtn.textContent = '❌ غير متصل';
+                testBtn.style.backgroundColor = '#ef4444';
+                this.updateAIStatus(false);
+            }
+        } catch (error) {
+            console.error('Error testing OpenAI:', error);
+            this.showNotification(`❌ خطأ في اختبار OpenAI`, 'error');
+            testBtn.textContent = '❌ خطأ';
+            testBtn.style.backgroundColor = '#ef4444';
+            this.updateAIStatus(false);
+        } finally {
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                testBtn.disabled = false;
+                testBtn.textContent = '🤖 اختبار OpenAI';
+                testBtn.style.backgroundColor = '';
+            }, 3000);
+        }
+    }
+    
+    updateAIStatus(isConnected = null) {
+        const statusIndicator = document.getElementById('ai-status-indicator');
+        const statusText = document.getElementById('ai-status-text');
+        
+        if (statusIndicator && statusText) {
+            if (isConnected === true) {
+                statusIndicator.className = 'status-dot online';
+                statusText.textContent = 'متصل';
+            } else if (isConnected === false) {
+                statusIndicator.className = 'status-dot offline';
+                statusText.textContent = 'غير متصل';
+            } else {
+                // Default/unknown state
+                statusIndicator.className = 'status-dot offline';
+                statusText.textContent = 'جاري التحقق...';
+            }
+        }
+    }
 }
 
 // Initialize dashboard when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new TradingDashboard();
+    const dashboard = new TradingDashboard();
+    
+    // Initialize AI chat after dashboard
+    if (dashboard.initializeAIChat) {
+        dashboard.initializeAIChat();
+    }
 });

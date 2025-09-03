@@ -58,6 +58,45 @@
             </section>
         </div>
 
+        <!-- AI Chat Section -->
+        <section class="card ai-chat-container">
+            <div class="ai-chat-header">
+                <h4>🤖 دردشة مع الذكاء الاصطناعي</h4>
+                <div class="ai-status">
+                    <span id="ai-status-indicator" class="status-dot offline"></span>
+                    <span id="ai-status-text">غير متصل</span>
+                    <button id="test-openai-btn" class="sec-btn">🤖 اختبار OpenAI</button>
+                </div>
+            </div>
+            
+            <div class="ai-chat-messages" id="ai-chat-messages">
+                <div class="ai-message welcome-message">
+                    <div class="message-content">
+                        مرحباً! أنا مساعدك الذكي للتحليل المالي. يمكنني مساعدتك في تحليل الأسعار، تقديم نصائح الاستثمار، وتفسير إشارات السوق. اسألني أي شيء! 📈
+                    </div>
+                    <div class="message-time">الآن</div>
+                </div>
+            </div>
+            
+            <div class="ai-chat-input">
+                <div class="input-group">
+                    <input type="text" id="ai-chat-input" placeholder="اكتب سؤالك هنا..." maxlength="500">
+                    <button id="ai-send-btn" class="send-btn" disabled>
+                        <span class="send-icon">🚀</span>
+                        إرسال
+                    </button>
+                </div>
+                <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                    <span>الذكاء الاصطناعي يكتب</span>
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Alert Settings Modal -->
         <div id="alert-modal" class="modal">
             <div class="modal-content">

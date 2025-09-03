@@ -162,6 +162,107 @@ def test_openai_api():
             }
         })
 
+@app.route('/api/ai-chat', methods=['POST'])
+@login_required
+def ai_chat():
+    """دردشة مع الذكاء الاصطناعي للتحليل المالي"""
+    try:
+        # الحصول على رسالة المستخدم
+        data = request.get_json()
+        user_message = data.get('message', '').strip()
+        
+        if not user_message:
+            return jsonify({
+                'success': False,
+                'error': 'يرجى كتابة رسالة'
+            })
+        
+        # التحقق من طول الرسالة
+        if len(user_message) > 500:
+            return jsonify({
+                'success': False,
+                'error': 'الرسالة طويلة جداً (الحد الأقصى 500 حرف)'
+            })
+        
+        # التحقق من توفر نظام AI
+        if not hasattr(price_service, 'ai_analyzer') or not price_service.ai_analyzer:
+            return jsonify({
+                'success': False,
+                'error': 'نظام الذكاء الاصطناعي غير متاح حالياً'
+            })
+        
+        # الحصول على البيانات الحالية للسوق
+        current_prices = price_service.get_all_prices()
+        
+        # بناء context للمحادثة مع معلومات السوق
+        market_context = f"""
+أنت مساعد ذكي متخصص في التحليل المالي والاستثمار. 
+
+البيانات الحالية للسوق:
+"""
+        
+        for asset_id, price_info in current_prices.items():
+            if isinstance(price_info, dict) and 'price' in price_info:
+                price = price_info['price']
+                change = price_info.get('price_change_24h', 0)
+                change_text = f"+{change:.2f}%" if change > 0 else f"{change:.2f}%"
+                market_context += f"- {price_info.get('name', asset_id)}: {price:.2f} ({change_text})\n"
+        
+        market_context += f"""
+تعليمات:
+- أجب باللغة العربية دائماً
+- قدم نصائح مالية عامة وليس نصائح استثمارية شخصية
+- كن مفيداً وودوداً
+- اذكر المخاطر عند الحاجة
+- استخدم الرموز التعبيرية بشكل معتدل
+- أجب بإيجاز (أقل من 300 كلمة)
+
+سؤال المستخدم: {user_message}
+"""
+        
+        # إرسال الطلب إلى OpenAI
+        from openai import OpenAI
+        import os
+        
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # استخدام النموذج الأكثر فعالية
+            messages=[
+                {
+                    "role": "system", 
+                    "content": market_context
+                },
+                {
+                    "role": "user", 
+                    "content": user_message
+                }
+            ],
+            max_tokens=400,
+            temperature=0.7
+        )
+        
+        ai_response = response.choices[0].message.content
+        if ai_response:
+            ai_response = ai_response.strip()
+        else:
+            ai_response = "عذراً، لم أتمكن من الحصول على إجابة مناسبة."
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'message': ai_response,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logging.error(f"خطأ في دردشة AI: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'حدث خطأ: {str(e)}'
+        })
+
 # مسارات المصادقة
 @app.route('/login', methods=['GET', 'POST'])
 def login():
