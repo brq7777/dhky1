@@ -113,6 +113,10 @@ class TradingDashboard {
         
         this.socket.on('trading_signal', (signal) => {
             console.log('Trading signal received:', signal);
+            
+            // عرض إشعار مرئي للإشارة
+            this.showSignalNotification(signal);
+            
             this.handleTradingSignal(signal);
             
             // Update signal statistics
@@ -677,6 +681,74 @@ class TradingDashboard {
         }
     }
     
+    showSignalNotification(signal) {
+        // عرض إشعار مرئي وبارز للإشارة الجديدة
+        const notificationDiv = document.createElement('div');
+        notificationDiv.className = 'signal-notification';
+        notificationDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${signal.type === 'BUY' ? '#10b981' : '#ef4444'};
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 300px;
+            animation: slideIn 0.5s ease-out;
+        `;
+        
+        const signalIcon = signal.type === 'BUY' ? '📈' : '📉';
+        const signalColor = signal.type === 'BUY' ? 'شراء' : 'بيع';
+        
+        notificationDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 24px;">${signalIcon}</span>
+                <div>
+                    <div style="font-size: 18px; margin-bottom: 5px;">
+                        إشارة ${signalColor}: ${signal.asset_name}
+                    </div>
+                    <div style="font-size: 14px; opacity: 0.9;">
+                        السعر: ${signal.price.toFixed(4)} | الثقة: ${signal.confidence}%
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // إضافة الإشعار للصفحة
+        document.body.appendChild(notificationDiv);
+        
+        // إزالة الإشعار بعد 15 ثانية
+        setTimeout(() => {
+            if (notificationDiv.parentNode) {
+                notificationDiv.style.animation = 'slideOut 0.5s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(notificationDiv);
+                }, 500);
+            }
+        }, 15000);
+        
+        // إضافة أنيميشن CSS إذا لم يكن موجود
+        if (!document.getElementById('signal-animations')) {
+            const style = document.createElement('style');
+            style.id = 'signal-animations';
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
     addSignalsPanel() {
         // Add test buttons to header controls
         const headerControls = document.querySelector('.header-controls .status-indicator');
@@ -829,7 +901,7 @@ class TradingDashboard {
                         signalArea.innerHTML = '';
                         console.log('Signal cleared for:', assetId);
                     }
-                }, 3000);
+                }, 30000); // تبقى الإشارة لمدة 30 ثانية بدلاً من 3 ثوان
             }
         }, 1000);
     }
