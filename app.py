@@ -41,16 +41,16 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO optimized for gunicorn deployment
+# Initialize SocketIO with minimal stable settings
 socketio = SocketIO(app, 
                    cors_allowed_origins="*",
-                   ping_timeout=60,        # مهلة مناسبة للنشر
-                   ping_interval=25,       # فحص منتظم للاستقرار
+                   ping_timeout=300,        # مهلة طويلة جداً
+                   ping_interval=120,       # فحص نادر
                    logger=False,
                    engineio_logger=False,
-                   async_mode='threading',
-                   transports=['polling'],  # polling فقط لضمان الاستقرار مع gunicorn
-                   allow_upgrades=False,    # منع الترقية لتجنب مشاكل WebSocket
+                   async_mode='threading',  
+                   transports=['polling'],  # polling فقط للاستقرار الأقصى
+                   allow_upgrades=False,    # منع أي ترقيات
                    cookie=False)
 
 # Initialize price service
@@ -484,11 +484,12 @@ def price_monitor():
                 # Only send updates every few cycles to avoid overwhelming the connection
                 cycle_count += 1
                 
-                # إرسال تحديثات الأسعار فورياً بدون تأخير
-                socketio.emit('price_update', prices)
+                # إرسال تحديثات الأسعار كل 5 ثوان فقط لتقليل الحمل
+                if cycle_count % 5 == 0:
+                    socketio.emit('price_update', prices)
                 
-                # إرسال حالة النظام كل دورتين (كل 3-6 ثوان)
-                if cycle_count % 2 == 0:
+                # إرسال حالة النظام كل 10 ثوان
+                if cycle_count % 10 == 0:
                     status = price_service.get_system_status()
                     socketio.emit('system_status', status)
             
@@ -562,9 +563,9 @@ def price_monitor():
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        # تحديث فوري للبيانات الحية
+        # تحديث أبطأ لتجنب إجهاد الاتصال
         processing_time = time.time() - start_time
-        sleep_time = max(1, 2 - processing_time)  # تحديث كل 1-2 ثانية للسرعة القصوى
+        sleep_time = max(5, 5 - processing_time)  # تحديث كل 5 ثوان لتقليل الحمل
         time.sleep(sleep_time)
 
 # API للحصول على إحصائيات الصفقات الحقيقية
