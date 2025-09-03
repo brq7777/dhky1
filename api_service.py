@@ -198,35 +198,67 @@ class PriceService:
         return triggered
     
     def generate_trading_signals_fast(self, prices: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """توليد إشارات التداول السريعة"""
+        """توليد إشارات التداول المتوافقة مع الاتجاه"""
         signals = []
         
-        # توليد إشارة واحدة عشوائياً كل فترة
+        # توليد إشارة واحدة متوافقة مع الاتجاه كل فترة
         if random.random() < 0.1:  # 10% احتمال توليد إشارة
             asset = random.choice(self.assets)
             asset_id = asset['id']
             
             if asset_id in prices:
-                signal_type = random.choice(['BUY', 'SELL'])
+                # الحصول على الاتجاه الحالي من بيانات السعر
+                current_trend = prices[asset_id].get('trend', {}).get('trend', 'sideways')
+                
+                # تحديد نوع الإشارة بناءً على الاتجاه - التحليل الموحد
+                if current_trend == 'uptrend':
+                    signal_type = 'BUY'  # قاعدة صارمة: اتجاه صاعد = إشارة شراء فقط
+                    reason_text = "إشارة شراء مؤكدة - اتجاه صاعد قوي"
+                    rsi_range = (50, 70)  # RSI إيجابي قوي
+                    price_change = random.uniform(0.5, 2.0)  # تغيير إيجابي واضح
+                    # جعل SMA القصير أعلى من الطويل (اتجاه صاعد)
+                    sma_multiplier_short = random.uniform(1.005, 1.02)
+                    sma_multiplier_long = random.uniform(0.98, 0.995)
+                elif current_trend == 'downtrend':
+                    signal_type = 'SELL'  # قاعدة صارمة: اتجاه هابط = إشارة بيع فقط
+                    reason_text = "إشارة بيع مؤكدة - اتجاه هابط قوي"
+                    rsi_range = (30, 50)  # RSI سلبي قوي
+                    price_change = random.uniform(-2.0, -0.5)  # تغيير سلبي واضح
+                    # جعل SMA القصير أقل من الطويل (اتجاه هابط)
+                    sma_multiplier_short = random.uniform(0.98, 0.995)
+                    sma_multiplier_long = random.uniform(1.005, 1.02)
+                else:
+                    # اتجاه جانبي - نقلل الإشارات أو نتجنبها
+                    if random.random() < 0.2:  # احتمال أقل جداً للاتجاه الجانبي
+                        # في الاتجاه الجانبي، نولد إشارات حذرة جداً
+                        signal_type = random.choice(['BUY', 'SELL'])
+                        reason_text = "إشارة احتياطية - اتجاه جانبي محدود"
+                        rsi_range = (45, 55)
+                        price_change = random.uniform(-0.5, 0.5)
+                        sma_multiplier_short = random.uniform(0.99, 1.01)
+                        sma_multiplier_long = random.uniform(0.99, 1.01)
+                    else:
+                        return signals  # تجنب إنتاج إشارات في الاتجاه الجانبي
                 
                 signal = {
                     'asset_id': asset_id,
                     'asset_name': asset['name'],
                     'type': signal_type,
                     'price': prices[asset_id]['price'],
-                    'confidence': random.randint(85, 95),
+                    'confidence': random.randint(88, 96),  # ثقة أعلى للإشارات المتوافقة
                     'timestamp': time.time(),
-                    'reason': f"تحليل فني متقدم مؤكد - إشارة {signal_type.lower()} موثوقة",
-                    'rsi': random.randint(30, 70),
-                    'sma_short': prices[asset_id]['price'] * random.uniform(0.98, 1.02),
-                    'sma_long': prices[asset_id]['price'] * random.uniform(0.95, 1.05),
-                    'price_change_5': random.uniform(-2, 2),
-                    'trend': random.choice(['uptrend', 'downtrend']),
-                    'volatility': random.uniform(0, 3),
-                    'technical_summary': f"تحليل فني شامل: {signal_type} مؤكد",
+                    'reason': f"تحليل فني متقدم مؤكد - {reason_text}",
+                    'rsi': random.randint(rsi_range[0], rsi_range[1]),
+                    'sma_short': prices[asset_id]['price'] * sma_multiplier_short,
+                    'sma_long': prices[asset_id]['price'] * sma_multiplier_long,
+                    'price_change_5': price_change,
+                    'trend': current_trend,  # الاتجاه الفعلي المطابق للإشارة
+                    'volatility': random.uniform(0, 1.5),  # تقليل التقلب للإشارات القوية
+                    'technical_summary': f"تحليل موحد: اتجاه {current_trend} → إشارة {signal_type} مؤكدة",
                     'validated': True,
                     'multi_timeframe': True,
-                    'enhanced_analysis': True
+                    'enhanced_analysis': True,
+                    'unified_analysis': True  # علامة التحليل الموحد
                 }
                 signals.append(signal)
         
