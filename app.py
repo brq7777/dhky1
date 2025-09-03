@@ -491,16 +491,22 @@ def price_monitor():
             # Get current prices - optimized call
             prices = price_service.get_all_prices_fast()
             
-            # Only emit if prices actually changed to reduce network traffic
-            if prices and price_service.has_price_changes():
-                socketio.emit('price_update', prices)
-            
-            # Emit system status less frequently (every 15 seconds)
-            current_time = time.time()
-            if current_time - last_system_status_update > 15:
-                status = price_service.get_system_status()
-                socketio.emit('system_status', status)
-                last_system_status_update = current_time
+            # Emit updates much less frequently to reduce network load
+            if prices:
+                # Only send updates every few cycles to avoid overwhelming the connection
+                if hasattr(price_monitor, 'cycle_count'):
+                    price_monitor.cycle_count += 1
+                else:
+                    price_monitor.cycle_count = 1
+                
+                # Send price updates only every 3rd cycle (every 30-45 seconds)
+                if price_monitor.cycle_count % 3 == 0:
+                    socketio.emit('price_update', prices)
+                
+                # Send system status only every 6th cycle (every 60-90 seconds)
+                if price_monitor.cycle_count % 6 == 0:
+                    status = price_service.get_system_status()
+                    socketio.emit('system_status', status)
             
             # Check for triggered alerts - optimized
             triggered_alerts = price_service.check_alerts_fast(prices)
@@ -517,9 +523,9 @@ def price_monitor():
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        # Stabilized sleep time for reliable connections
+        # Ultra-stable sleep time for rock-solid connections
         processing_time = time.time() - start_time
-        sleep_time = max(3, 5 - processing_time)  # Slower but more stable updates (3-5 seconds)
+        sleep_time = max(10, 15 - processing_time)  # Much slower but extremely stable (10-15 seconds)
         time.sleep(sleep_time)
 
 # Start background price monitoring
