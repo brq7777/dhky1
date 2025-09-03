@@ -33,24 +33,33 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO for maximum stability - polling only
+# Initialize SocketIO for maximum speed and stability
 socketio = SocketIO(app, 
                    cors_allowed_origins="*", 
-                   ping_timeout=120,       # Very long timeout
-                   ping_interval=30,       # Less frequent pings
+                   ping_timeout=60,        # Optimized timeout
+                   ping_interval=15,       # Faster pings for responsiveness
                    logger=False,           # Reduce logging overhead
                    engineio_logger=False,  # Reduce logging overhead
-                   async_mode=None,        # Let SocketIO choose best mode
-                   transports=['polling']) # Use only polling for stability
+                   async_mode='threading', # Use threading for better performance
+                   transports=['polling', 'websocket']) # Enable both for speed
 
 # Initialize price service
 price_service = PriceService()
 
 # إنشاء جداول قاعدة البيانات وإنشاء المستخدم الافتراضي
 with app.app_context():
-    # حذف الجداول القديمة وإعادة إنشائها لتحديث البنية
-    db.drop_all()
-    db.create_all()
+    # إعداد قاعدة البيانات بأمان
+    try:
+        # إنشاء الجداول إذا لم تكن موجودة
+        db.create_all()
+        logging.info("✅ تم إعداد قاعدة البيانات بنجاح")
+    except Exception as e:
+        logging.warning(f"تحذير في قاعدة البيانات: {e}")
+        try:
+            # إنشاء الجداول مرة أخرى
+            db.create_all()
+        except Exception as e2:
+            logging.error(f"خطأ في إعداد قاعدة البيانات: {e2}")
     
     # إنشاء المستخدم الافتراضي كمدير
     admin_email = "brq7787@gmail.com"
@@ -481,9 +490,9 @@ def price_monitor():
         except Exception as e:
             logging.error(f"Error in price monitor: {e}")
         
-        # Dynamic sleep time based on processing time
+        # Optimized sleep time for better performance
         processing_time = time.time() - start_time
-        sleep_time = max(2, 3 - processing_time)  # Faster updates (2-3 seconds)
+        sleep_time = max(1, 2 - processing_time)  # Much faster updates (1-2 seconds)
         time.sleep(sleep_time)
 
 # Start background price monitoring
