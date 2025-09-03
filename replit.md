@@ -1,12 +1,23 @@
-# Real-Time Financial Assets Dashboard
+# Real-Time Financial Assets Dashboard with Advanced Smart Analysis
 
 ## Overview
 
-This is a real-time financial assets monitoring dashboard that tracks prices for cryptocurrencies, precious metals, and forex pairs. The application provides live price updates, price alert functionality, and a responsive Arabic-language interface. It fetches data from multiple financial APIs (Binance for crypto and TwelveData for metals/forex) and delivers real-time updates to users through WebSocket connections.
+This is a sophisticated real-time financial assets monitoring dashboard featuring advanced smart technical analysis. The system tracks prices for cryptocurrencies, precious metals, and forex pairs with intelligent signal generation, trend stability, and self-learning capabilities. The application provides ultra-fast live price updates, smart trading signals with temporal locking, and a responsive Arabic-language interface.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Updates (September 2025)
+
+### Advanced Smart Technical Analysis System
+- ✅ **Intelligent Signal Generation**: Smart analyzer with multi-indicator consensus
+- ✅ **Temporal Signal Locking**: Signals locked for 5-30 minutes to prevent fluctuation
+- ✅ **Self-Learning System**: Adaptive weights based on signal performance
+- ✅ **Multi-Timeframe Analysis**: RSI, MACD, Bollinger Bands, Stochastic, Williams %R
+- ✅ **Trend Stability Control**: Signals only generated with >70% trend stability
+- ✅ **Risk Management**: Automatic stop-loss and take-profit calculations
+- ✅ **Performance Tracking**: Real-time accuracy monitoring and system optimization
 
 ## System Architecture
 

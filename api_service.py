@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import requests
 import random
+from advanced_technical_analysis import SmartTechnicalAnalyzer, MarketState
 
 class PriceService:
     """خدمة متقدمة لمراقبة أسعار الأصول المالية - بدون ذكاء اصطناعي"""
@@ -31,6 +32,9 @@ class PriceService:
         self.alerts = []
         self.offline_mode = False
         self.last_price_change_check = 0
+        
+        # النظام الذكي المتطور للتحليل الفني
+        self.smart_analyzer = SmartTechnicalAnalyzer()
         
         # البيانات المولدة للنظام
         self.generate_sample_data()
