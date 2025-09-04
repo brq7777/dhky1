@@ -945,10 +945,21 @@ class TradingDashboard {
             const currentTrend = this.getCurrentTrend(assetId);
             const expectedSignal = this.predictSignalType(currentTrend, assetId);
             
-            // Display expected signal type
+            // Clear and setup countdown display structure
+            countdownDisplay.innerHTML = '';
+            
+            // Create time display
+            const timeDisplay = document.createElement('span');
+            timeDisplay.className = 'time-display';
+            timeDisplay.textContent = `⏱️ ${minutes}:00`;
+            
+            // Create signal type display
             const signalTypeDisplay = document.createElement('span');
             signalTypeDisplay.className = `signal-type-preview ${expectedSignal.type.toLowerCase()}`;
             signalTypeDisplay.innerHTML = `${expectedSignal.icon} ${expectedSignal.text}`;
+            
+            // Append both elements
+            countdownDisplay.appendChild(timeDisplay);
             countdownDisplay.appendChild(signalTypeDisplay);
         }
         
@@ -976,9 +987,22 @@ class TradingDashboard {
             if (countdownDisplay) {
                 // Update countdown but preserve signal type display
                 const signalPreview = countdownDisplay.querySelector('.signal-type-preview');
-                countdownDisplay.textContent = displayText;
                 if (signalPreview) {
-                    countdownDisplay.appendChild(signalPreview);
+                    // Update only the text part, keeping the signal preview
+                    const timeSpan = countdownDisplay.querySelector('.time-display');
+                    if (timeSpan) {
+                        timeSpan.textContent = displayText;
+                    } else {
+                        // Create time display span if it doesn't exist
+                        const newTimeSpan = document.createElement('span');
+                        newTimeSpan.className = 'time-display';
+                        newTimeSpan.textContent = displayText;
+                        countdownDisplay.innerHTML = '';
+                        countdownDisplay.appendChild(newTimeSpan);
+                        countdownDisplay.appendChild(signalPreview);
+                    }
+                } else {
+                    countdownDisplay.textContent = displayText;
                 }
                 
                 // Change color based on remaining time

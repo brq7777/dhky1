@@ -37,7 +37,7 @@ class OpenAIMarketAnalyzer:
                 self.enabled = False
         
         # إعدادات التحليل
-        self.temperature = 0.2  # دقة عالية للتحليل المالي
+        self.temperature = 1  # GPT-5 يدعم فقط temperature=1
         self.max_completion_tokens = 1000
         
         # ذاكرة التعلم من الأخطاء السابقة
@@ -77,7 +77,7 @@ class OpenAIMarketAnalyzer:
                         "content": analysis_prompt
                     }
                 ],
-                temperature=self.temperature,
+                temperature=1,  # GPT-5 يدعم فقط temperature=1
                 max_completion_tokens=self.max_completion_tokens,
                 response_format={"type": "json_object"}
             )
@@ -440,7 +440,7 @@ class OpenAIMarketAnalyzer:
                         "content": prediction_prompt
                     }
                 ],
-                temperature=0.2,
+                temperature=1,  # GPT-5 يدعم فقط هذه القيمة
                 max_completion_tokens=300,
                 response_format={"type": "json_object"}
             )

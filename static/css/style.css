@@ -826,23 +826,32 @@ body.theme-light-blue .asset-row:hover {
     border-radius: 20px;
     font-size: 13px;
     font-weight: bold;
-    min-width: 120px;
+    min-width: 160px;
     text-align: center;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     gap: 8px;
     justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.time-display {
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
 }
 
 .signal-type-preview {
-    padding: 3px 8px;
+    padding: 4px 10px;
     border-radius: 12px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: bold;
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    white-space: nowrap;
+    animation: pulse 2s ease-in-out infinite;
 }
 
 .signal-type-preview.buy {
