@@ -935,11 +935,21 @@ class TradingDashboard {
             selectedBtn.classList.add('active');
         }
         
-        // Show countdown
+        // Show countdown with expected signal type
         const countdownDisplay = document.querySelector(`[data-countdown-id="${assetId}"]`);
         if (countdownDisplay) {
             countdownDisplay.style.display = 'block';
             countdownDisplay.className = 'countdown-display running';
+            
+            // Get current trend to predict signal type
+            const currentTrend = this.getCurrentTrend(assetId);
+            const expectedSignal = this.predictSignalType(currentTrend, assetId);
+            
+            // Display expected signal type
+            const signalTypeDisplay = document.createElement('span');
+            signalTypeDisplay.className = `signal-type-preview ${expectedSignal.type.toLowerCase()}`;
+            signalTypeDisplay.innerHTML = `${expectedSignal.icon} ${expectedSignal.text}`;
+            countdownDisplay.appendChild(signalTypeDisplay);
         }
         
         // Send analysis request to server
@@ -964,7 +974,12 @@ class TradingDashboard {
             const displayText = `⏱️ ${mins}:${secs.toString().padStart(2, '0')}`;
             
             if (countdownDisplay) {
+                // Update countdown but preserve signal type display
+                const signalPreview = countdownDisplay.querySelector('.signal-type-preview');
                 countdownDisplay.textContent = displayText;
+                if (signalPreview) {
+                    countdownDisplay.appendChild(signalPreview);
+                }
                 
                 // Change color based on remaining time
                 if (remainingSeconds > totalSeconds * 0.6) {
@@ -1009,6 +1024,62 @@ class TradingDashboard {
         });
         
         console.log(`Timed analysis completed for ${assetId}`);
+    }
+    
+    getCurrentTrend(assetId) {
+        // Get current trend from price data
+        const priceData = this.prices[assetId];
+        if (priceData && priceData.trend) {
+            return priceData.trend;
+        }
+        return { trend: 'unknown', volatility: 0 };
+    }
+    
+    predictSignalType(trend, assetId) {
+        // Predict signal type based on current trend and technical indicators
+        const priceData = this.prices[assetId];
+        let signalType = 'HOLD';
+        let icon = '⏸️';
+        let text = 'انتظار';
+        
+        if (trend && priceData) {
+            const rsi = priceData.trend?.rsi || 50;
+            const trendDirection = trend.trend || 'unknown';
+            const volatility = trend.volatility || 0;
+            
+            // Predict based on trend and RSI
+            if (trendDirection === 'uptrend' && rsi < 70) {
+                signalType = 'BUY';
+                icon = '🟢';
+                text = 'توقع: شراء';
+            } else if (trendDirection === 'downtrend' && rsi > 30) {
+                signalType = 'SELL';
+                icon = '🔴';
+                text = 'توقع: بيع';
+            } else if (rsi < 30) {
+                signalType = 'BUY';
+                icon = '🟢';
+                text = 'توقع: شراء (RSI منخفض)';
+            } else if (rsi > 70) {
+                signalType = 'SELL';
+                icon = '🔴';
+                text = 'توقع: بيع (RSI مرتفع)';
+            } else if (volatility > 2) {
+                signalType = 'HOLD';
+                icon = '⚠️';
+                text = 'متذبذب - انتظار';
+            } else {
+                signalType = 'HOLD';
+                icon = '⏸️';
+                text = 'تحليل جاري';
+            }
+        }
+        
+        return {
+            type: signalType,
+            icon: icon,
+            text: text
+        };
     }
     
     showAnalysisNotification(assetId, message) {
