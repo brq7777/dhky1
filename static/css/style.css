@@ -697,7 +697,7 @@ body.theme-light-blue .card {
 
 .asset-row {
     display: grid;
-    grid-template-columns: 1fr 2fr auto;
+    grid-template-columns: 1fr 2fr 1.5fr auto;
     align-items: center;
     gap: 15px;
     padding: 12px 0;
@@ -766,6 +766,99 @@ body.theme-light-blue .asset-row:hover {
 .asset-title {
     font-weight: bold;
     color: #fff;
+}
+
+/* Timer buttons and countdown styles */
+.timer-selection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+}
+
+.timer-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid rgba(74, 144, 226, 0.5);
+    background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(59, 130, 246, 0.2));
+    color: #4a90e2;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timer-btn:hover {
+    border-color: #4a90e2;
+    background: linear-gradient(135deg, rgba(74, 144, 226, 0.3), rgba(59, 130, 246, 0.4));
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(74, 144, 226, 0.5);
+}
+
+.timer-btn.active {
+    background: linear-gradient(135deg, #4a90e2, #3b82f6);
+    border-color: #4a90e2;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+.timer-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.timer-btn.disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.countdown-display {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+    min-width: 80px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.countdown-display.running {
+    background: linear-gradient(135deg, rgba(39, 174, 96, 0.2), rgba(46, 204, 113, 0.3));
+    border: 2px solid #27ae60;
+    color: #27ae60;
+}
+
+.countdown-display.warning {
+    background: linear-gradient(135deg, rgba(241, 196, 15, 0.2), rgba(243, 156, 18, 0.3));
+    border: 2px solid #f39c12;
+    color: #f39c12;
+}
+
+.countdown-display.urgent {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 0.2), rgba(192, 57, 43, 0.3));
+    border: 2px solid #e74c3c;
+    color: #e74c3c;
+    animation: urgent-pulse 0.5s infinite;
+}
+
+.countdown-display.complete {
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.2), rgba(41, 128, 185, 0.3));
+    border: 2px solid #3498db;
+    color: #3498db;
+}
+
+@keyframes urgent-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 /* Inline trend display - NEW SYSTEM */

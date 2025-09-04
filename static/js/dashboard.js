@@ -16,6 +16,7 @@ class TradingDashboard {
         
         this.alertStates = JSON.parse(localStorage.getItem('alertStates') || '{}');
         this.prices = {};
+        this.activeTimers = {}; // متابعة التحليلات النشطة بالتوقيت
         this.audioContext = null;
         this.currentAlertAsset = null;
         this.autoRefresh = JSON.parse(localStorage.getItem('autoRefresh') || 'true');
@@ -143,6 +144,23 @@ class TradingDashboard {
         this.socket.on('connection_confirmed', (data) => {
             console.log('Connection confirmed by server:', data);
             this.updateConnectionStatus(true);
+        });
+        
+        this.socket.on('timed_analysis_started', (data) => {
+            console.log('Timed analysis started:', data);
+        });
+        
+        this.socket.on('timed_analysis_complete', (data) => {
+            console.log('Timed analysis complete:', data);
+            if (data.result === 'no_signal') {
+                // Show notification that no signal was found
+                this.showAnalysisNotification(data.asset_id, data.message);
+            }
+        });
+        
+        this.socket.on('timed_analysis_error', (data) => {
+            console.error('Timed analysis error:', data);
+            this.finishTimedAnalysis(data.asset_id);
         });
     }
     
@@ -328,6 +346,34 @@ class TradingDashboard {
         signalArea.className = 'asset-signal';
         signalArea.setAttribute('data-signal-id', asset.id);
         
+        // Create timer selection area
+        const timerArea = document.createElement('div');
+        timerArea.className = 'timer-selection';
+        timerArea.setAttribute('data-timer-id', asset.id);
+        
+        // Create timer buttons (1-5 minutes)
+        for (let i = 1; i <= 5; i++) {
+            const timerBtn = document.createElement('button');
+            timerBtn.className = 'timer-btn';
+            timerBtn.setAttribute('data-minutes', i);
+            timerBtn.setAttribute('data-asset-id', asset.id);
+            timerBtn.textContent = i;
+            timerBtn.title = `تحليل ${i} ${i === 1 ? 'دقيقة' : 'دقائق'}`;
+            
+            timerBtn.addEventListener('click', () => {
+                this.startTimedAnalysis(asset.id, i);
+            });
+            
+            timerArea.appendChild(timerBtn);
+        }
+        
+        // Create countdown display
+        const countdownDisplay = document.createElement('div');
+        countdownDisplay.className = 'countdown-display';
+        countdownDisplay.setAttribute('data-countdown-id', asset.id);
+        countdownDisplay.style.display = 'none';
+        timerArea.appendChild(countdownDisplay);
+        
         const actions = document.createElement('div');
         actions.className = 'asset-actions';
         
@@ -371,6 +417,7 @@ class TradingDashboard {
         actions.appendChild(alertBtn);
         row.appendChild(name);
         row.appendChild(signalArea);
+        row.appendChild(timerArea);
         row.appendChild(actions);
         
         return row;
@@ -868,6 +915,142 @@ class TradingDashboard {
     }
     
 
+    startTimedAnalysis(assetId, minutes) {
+        // Check if there's already an active analysis
+        if (this.activeTimers[assetId]) {
+            console.log(`Analysis already running for ${assetId}`);
+            return;
+        }
+        
+        // Disable all timer buttons for this asset
+        const timerButtons = document.querySelectorAll(`[data-asset-id="${assetId}"].timer-btn`);
+        timerButtons.forEach(btn => {
+            btn.disabled = true;
+            btn.classList.add('disabled');
+        });
+        
+        // Highlight selected button
+        const selectedBtn = document.querySelector(`[data-asset-id="${assetId}"][data-minutes="${minutes}"]`);
+        if (selectedBtn) {
+            selectedBtn.classList.add('active');
+        }
+        
+        // Show countdown
+        const countdownDisplay = document.querySelector(`[data-countdown-id="${assetId}"]`);
+        if (countdownDisplay) {
+            countdownDisplay.style.display = 'block';
+            countdownDisplay.className = 'countdown-display running';
+        }
+        
+        // Send analysis request to server
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('start_timed_analysis', {
+                asset_id: assetId,
+                duration_minutes: minutes,
+                timestamp: Date.now()
+            });
+            console.log(`Started ${minutes}-minute analysis for ${assetId}`);
+        }
+        
+        // Start countdown timer
+        const totalSeconds = minutes * 60;
+        let remainingSeconds = totalSeconds;
+        
+        this.activeTimers[assetId] = setInterval(() => {
+            remainingSeconds--;
+            
+            const mins = Math.floor(remainingSeconds / 60);
+            const secs = remainingSeconds % 60;
+            const displayText = `⏱️ ${mins}:${secs.toString().padStart(2, '0')}`;
+            
+            if (countdownDisplay) {
+                countdownDisplay.textContent = displayText;
+                
+                // Change color based on remaining time
+                if (remainingSeconds > totalSeconds * 0.6) {
+                    countdownDisplay.className = 'countdown-display running';
+                } else if (remainingSeconds > totalSeconds * 0.3) {
+                    countdownDisplay.className = 'countdown-display warning';
+                } else {
+                    countdownDisplay.className = 'countdown-display urgent';
+                }
+            }
+            
+            if (remainingSeconds <= 0) {
+                this.finishTimedAnalysis(assetId);
+            }
+        }, 1000);
+    }
+    
+    finishTimedAnalysis(assetId) {
+        // Clear timer
+        if (this.activeTimers[assetId]) {
+            clearInterval(this.activeTimers[assetId]);
+            delete this.activeTimers[assetId];
+        }
+        
+        // Update countdown display
+        const countdownDisplay = document.querySelector(`[data-countdown-id="${assetId}"]`);
+        if (countdownDisplay) {
+            countdownDisplay.textContent = '✅ تحليل مكتمل';
+            countdownDisplay.className = 'countdown-display complete';
+            
+            setTimeout(() => {
+                countdownDisplay.style.display = 'none';
+                countdownDisplay.textContent = '';
+            }, 5000);
+        }
+        
+        // Re-enable timer buttons
+        const timerButtons = document.querySelectorAll(`[data-asset-id="${assetId}"].timer-btn`);
+        timerButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.classList.remove('disabled', 'active');
+        });
+        
+        console.log(`Timed analysis completed for ${assetId}`);
+    }
+    
+    showAnalysisNotification(assetId, message) {
+        const notificationDiv = document.createElement('div');
+        notificationDiv.className = 'analysis-notification';
+        notificationDiv.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.95), rgba(41, 128, 185, 0.95));
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-weight: bold;
+            font-size: 14px;
+            min-width: 300px;
+            animation: slideIn 0.5s ease-out;
+        `;
+        
+        notificationDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">ℹ️</span>
+                <div>
+                    <div style="margin-bottom: 5px;">${assetId}</div>
+                    <div style="font-size: 12px; opacity: 0.9;">${message}</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notificationDiv);
+        
+        // Remove notification after 5 seconds
+        setTimeout(() => {
+            notificationDiv.style.animation = 'slideOut 0.5s ease-in';
+            setTimeout(() => {
+                document.body.removeChild(notificationDiv);
+            }, 500);
+        }, 5000);
+    }
+    
     testInlineSignal() {
         const assets = ['BTCUSDT', 'ETHUSDT', 'XAU/USD', 'EUR/USD'];
         const randomAsset = assets[Math.floor(Math.random() * assets.length)];

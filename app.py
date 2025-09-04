@@ -562,6 +562,130 @@ def handle_subscribe_alert(data):
         'type': alert_type
     })
 
+@socketio.on('start_timed_analysis')
+def handle_timed_analysis(data):
+    """Handle timed analysis request with comprehensive AI analysis"""
+    asset_id = data.get('asset_id')
+    duration_minutes = data.get('duration_minutes', 1)
+    timestamp = data.get('timestamp')
+    
+    logging.info(f"📊 Timed analysis requested: {asset_id} for {duration_minutes} minutes")
+    
+    # Schedule comprehensive analysis at the end of the timer
+    def perform_deep_analysis():
+        """Perform deep analysis after timer expires"""
+        try:
+            # Get current asset data
+            asset_data = None
+            prices = price_service.get_all_prices()
+            
+            if isinstance(prices, dict):
+                asset_data = prices.get(asset_id)
+            elif isinstance(prices, list):
+                for p in prices:
+                    if isinstance(p, dict) and p.get('id') == asset_id:
+                        asset_data = p
+                        break
+            
+            if not asset_data:
+                logging.error(f"Asset data not found for {asset_id}")
+                return
+            
+            # Get historical data for comprehensive analysis
+            historical_data = price_service.get_historical_prices(asset_id) if hasattr(price_service, 'get_historical_prices') else []
+            
+            # Perform comprehensive AI analysis
+            comprehensive_signal = analyze_asset_with_ai(asset_data, historical_data)
+            
+            if comprehensive_signal:
+                # Add timing information
+                comprehensive_signal['timing_analysis'] = {
+                    'duration_minutes': duration_minutes,
+                    'analysis_type': 'timed_comprehensive',
+                    'timestamp': time.time()
+                }
+                
+                # Enhance with OpenAI if available
+                if openai_analyzer.enabled:
+                    try:
+                        market_data = {
+                            'rsi': comprehensive_signal.get('rsi', 50),
+                            'trend': comprehensive_signal.get('trend', 'sideways'),
+                            'volatility': comprehensive_signal.get('volatility', 0),
+                            'sma_50': comprehensive_signal.get('sma_short', 0),
+                            'sma_200': comprehensive_signal.get('sma_long', 0)
+                        }
+                        
+                        # Get OpenAI analysis with economic news
+                        openai_analysis = openai_analyzer.analyze_with_economic_news(asset_data, market_data)
+                        
+                        if openai_analysis:
+                            comprehensive_signal['openai_analysis'] = openai_analysis
+                            comprehensive_signal['confidence'] = max(
+                                comprehensive_signal.get('confidence', 0),
+                                openai_analysis.get('confidence', 0)
+                            )
+                            comprehensive_signal['reason'] = f"{comprehensive_signal.get('reason', '')} + تحليل OpenAI GPT-5 المتقدم"
+                    except Exception as e:
+                        logging.error(f"OpenAI analysis error: {e}")
+                
+                # Add economic news analysis
+                if news_service.enabled:
+                    try:
+                        news_analysis = news_service.analyze_news_for_signal(
+                            asset_id,
+                            comprehensive_signal.get('type', 'BUY')
+                        )
+                        comprehensive_signal['news_analysis'] = news_analysis
+                        
+                        if news_analysis.get('supports_signal'):
+                            comprehensive_signal['confidence'] = min(100, comprehensive_signal.get('confidence', 0) + 10)
+                            comprehensive_signal['reason'] += ' + أخبار اقتصادية داعمة 📰'
+                    except Exception as e:
+                        logging.error(f"News analysis error: {e}")
+                
+                # Track the signal
+                try:
+                    from real_trades_tracker import real_trades_tracker
+                    trade_id = real_trades_tracker.track_real_signal(comprehensive_signal)
+                    comprehensive_signal['trade_id'] = trade_id
+                except Exception as e:
+                    logging.error(f"Error tracking timed signal: {e}")
+                
+                # Emit the comprehensive signal
+                socketio.emit('trading_signal', comprehensive_signal)
+                logging.info(f"✅ Timed comprehensive signal emitted for {asset_id}: {comprehensive_signal.get('type')} with {comprehensive_signal.get('confidence')}% confidence")
+            else:
+                # No signal conditions met after comprehensive analysis
+                logging.info(f"⏱️ Timed analysis complete for {asset_id} - No signal conditions met")
+                
+                # Send a status update
+                socketio.emit('timed_analysis_complete', {
+                    'asset_id': asset_id,
+                    'duration_minutes': duration_minutes,
+                    'result': 'no_signal',
+                    'message': 'التحليل مكتمل - لا توجد إشارات واضحة حالياً'
+                })
+                
+        except Exception as e:
+            logging.error(f"Error in timed analysis for {asset_id}: {e}")
+            socketio.emit('timed_analysis_error', {
+                'asset_id': asset_id,
+                'error': str(e)
+            })
+    
+    # Schedule the analysis after the timer duration
+    timer = threading.Timer(duration_minutes * 60, perform_deep_analysis)
+    timer.daemon = True
+    timer.start()
+    
+    # Send immediate confirmation
+    emit('timed_analysis_started', {
+        'asset_id': asset_id,
+        'duration_minutes': duration_minutes,
+        'start_time': timestamp
+    })
+
 def price_monitor():
     """Background task to monitor prices and send updates - optimized for speed"""
     last_system_status_update = 0
