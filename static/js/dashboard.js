@@ -1039,46 +1039,83 @@ class TradingDashboard {
         // Predict signal type based on current trend and technical indicators
         const priceData = this.prices[assetId];
         let signalType = 'HOLD';
-        let icon = '⏸️';
-        let text = 'انتظار';
+        let icon = '⏳';
+        let text = 'تحليل جاري';
+        let confidence = 0;
         
         if (trend && priceData) {
             const rsi = priceData.trend?.rsi || 50;
             const trendDirection = trend.trend || 'unknown';
             const volatility = trend.volatility || 0;
+            const priceChange = priceData.trend?.price_change_5 || 0;
             
-            // Predict based on trend and RSI
-            if (trendDirection === 'uptrend' && rsi < 70) {
-                signalType = 'BUY';
-                icon = '🟢';
-                text = 'توقع: شراء';
-            } else if (trendDirection === 'downtrend' && rsi > 30) {
-                signalType = 'SELL';
-                icon = '🔴';
-                text = 'توقع: بيع';
-            } else if (rsi < 30) {
-                signalType = 'BUY';
-                icon = '🟢';
-                text = 'توقع: شراء (RSI منخفض)';
+            // Advanced prediction logic
+            let buyScore = 0;
+            let sellScore = 0;
+            
+            // RSI Analysis
+            if (rsi < 30) {
+                buyScore += 3; // Oversold
+            } else if (rsi < 45) {
+                buyScore += 1;
             } else if (rsi > 70) {
+                sellScore += 3; // Overbought
+            } else if (rsi > 55) {
+                sellScore += 1;
+            }
+            
+            // Trend Analysis
+            if (trendDirection === 'uptrend') {
+                buyScore += 2;
+            } else if (trendDirection === 'downtrend') {
+                sellScore += 2;
+            }
+            
+            // Price Momentum
+            if (priceChange > 0.5) {
+                buyScore += 1;
+            } else if (priceChange < -0.5) {
+                sellScore += 1;
+            }
+            
+            // Volatility Check
+            if (volatility > 2) {
+                // High volatility - reduce confidence
+                buyScore = Math.floor(buyScore * 0.7);
+                sellScore = Math.floor(sellScore * 0.7);
+            }
+            
+            // Determine signal based on scores
+            if (buyScore > sellScore && buyScore >= 3) {
+                signalType = 'BUY';
+                icon = '📈';
+                confidence = Math.min(95, 50 + buyScore * 10);
+                text = `توقع: شراء ${confidence}%`;
+            } else if (sellScore > buyScore && sellScore >= 3) {
                 signalType = 'SELL';
-                icon = '🔴';
-                text = 'توقع: بيع (RSI مرتفع)';
+                icon = '📉';
+                confidence = Math.min(95, 50 + sellScore * 10);
+                text = `توقع: بيع ${confidence}%`;
             } else if (volatility > 2) {
                 signalType = 'HOLD';
                 icon = '⚠️';
                 text = 'متذبذب - انتظار';
             } else {
                 signalType = 'HOLD';
-                icon = '⏸️';
-                text = 'تحليل جاري';
+                icon = '⏳';
+                text = 'تحليل جاري...';
             }
+        } else {
+            // No data available yet
+            icon = '⌛';
+            text = 'جاري تجميع البيانات...';
         }
         
         return {
             type: signalType,
             icon: icon,
-            text: text
+            text: text,
+            confidence: confidence
         };
     }
     

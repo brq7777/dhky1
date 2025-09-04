@@ -38,7 +38,7 @@ class OpenAIMarketAnalyzer:
         
         # إعدادات التحليل
         self.temperature = 0.2  # دقة عالية للتحليل المالي
-        self.max_tokens = 1000
+        self.max_completion_tokens = 1000
         
         # ذاكرة التعلم من الأخطاء السابقة
         self.error_memory = []
@@ -78,7 +78,7 @@ class OpenAIMarketAnalyzer:
                     }
                 ],
                 temperature=self.temperature,
-                max_tokens=self.max_tokens,
+                max_completion_tokens=self.max_completion_tokens,
                 response_format={"type": "json_object"}
             )
             
@@ -340,7 +340,7 @@ class OpenAIMarketAnalyzer:
                     }
                 ],
                 temperature=0.1,  # دقة أعلى
-                max_tokens=500,
+                max_completion_tokens=500,
                 response_format={"type": "json_object"}
             )
             
@@ -394,7 +394,7 @@ class OpenAIMarketAnalyzer:
                     }
                 ],
                 temperature=0.3,
-                max_tokens=200,
+                max_completion_tokens=200,
                 response_format={"type": "json_object"}
             )
             
@@ -441,7 +441,7 @@ class OpenAIMarketAnalyzer:
                     }
                 ],
                 temperature=0.2,
-                max_tokens=300,
+                max_completion_tokens=300,
                 response_format={"type": "json_object"}
             )
             
@@ -481,7 +481,7 @@ def test_openai_connection() -> Dict:
                 {"role": "system", "content": "أنت مساعد اختبار."},
                 {"role": "user", "content": "قل 'الاتصال ناجح' بصيغة JSON مع حقل status."}
             ],
-            max_tokens=50,
+            max_completion_tokens=50,
             response_format={"type": "json_object"}
         )
         
