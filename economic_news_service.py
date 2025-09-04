@@ -233,8 +233,8 @@ class EconomicNewsService:
     
     def _analyze_impact(self, article: Dict) -> Dict:
         """تحليل تأثير الخبر على السوق"""
-        title = article.get('title', '').lower()
-        description = article.get('description', '').lower()
+        title = (article.get('title') or '').lower()
+        description = (article.get('description') or '').lower()
         content = f"{title} {description}"
         
         # تحديد نوع التأثير
@@ -270,8 +270,8 @@ class EconomicNewsService:
     
     def _calculate_relevance(self, article: Dict, asset_id: str) -> float:
         """حساب مدى صلة الخبر بالأصل"""
-        title = article.get('title', '').lower()
-        description = article.get('description', '').lower()
+        title = (article.get('title') or '').lower()
+        description = (article.get('description') or '').lower()
         content = f"{title} {description}"
         
         keywords = self.asset_keywords.get(asset_id, [asset_id])

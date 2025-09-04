@@ -581,7 +581,7 @@ def handle_timed_analysis(data):
             
             if isinstance(prices, dict):
                 asset_data = prices.get(asset_id)
-            elif isinstance(prices, list):
+            elif isinstance(prices, list) and prices and len(prices) > 0:
                 for p in prices:
                     if isinstance(p, dict) and p.get('id') == asset_id:
                         asset_data = p
@@ -592,7 +592,7 @@ def handle_timed_analysis(data):
                 return
             
             # Get historical data for comprehensive analysis
-            historical_data = price_service.get_historical_prices(asset_id) if hasattr(price_service, 'get_historical_prices') else []
+            historical_data = []
             
             # Perform comprehensive AI analysis
             comprehensive_signal = analyze_asset_with_ai(asset_data, historical_data)
