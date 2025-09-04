@@ -704,7 +704,13 @@ def price_monitor():
                         # إذا رفض الذكاء الداخلي، تحقق مع OpenAI
                         if openai_analyzer.enabled:
                             try:
-                                asset_data = {}
+                                asset_data = {
+                                    'id': raw_signal.get('asset_id', 'UNKNOWN'),
+                                    'name': raw_signal.get('asset_name', 'غير محدد'),
+                                    'price': raw_signal.get('price', 0),
+                                    'change_24h': raw_signal.get('price_change_5', 0),
+                                    'volume': 0
+                                }
                                 if isinstance(prices, list):
                                     for p in prices:
                                         if isinstance(p, dict) and p.get('id') == raw_signal.get('asset_id'):
