@@ -938,12 +938,14 @@ class TradingDashboard {
         // Show countdown with expected signal type
         const countdownDisplay = document.querySelector(`[data-countdown-id="${assetId}"]`);
         if (countdownDisplay) {
-            countdownDisplay.style.display = 'block';
+            countdownDisplay.style.display = 'flex';
             countdownDisplay.className = 'countdown-display running';
             
             // Get current trend to predict signal type
             const currentTrend = this.getCurrentTrend(assetId);
             const expectedSignal = this.predictSignalType(currentTrend, assetId);
+            
+            console.log(`Prediction for ${assetId}:`, expectedSignal);
             
             // Clear and setup countdown display structure
             countdownDisplay.innerHTML = '';
@@ -953,9 +955,11 @@ class TradingDashboard {
             timeDisplay.className = 'time-display';
             timeDisplay.textContent = `⏱️ ${minutes}:00`;
             
-            // Create signal type display
+            // Create signal type display with bigger font
             const signalTypeDisplay = document.createElement('span');
             signalTypeDisplay.className = `signal-type-preview ${expectedSignal.type.toLowerCase()}`;
+            signalTypeDisplay.style.fontSize = '14px';
+            signalTypeDisplay.style.fontWeight = 'bold';
             signalTypeDisplay.innerHTML = `${expectedSignal.icon} ${expectedSignal.text}`;
             
             // Append both elements
@@ -1110,29 +1114,41 @@ class TradingDashboard {
             }
             
             // Determine signal based on scores
-            if (buyScore > sellScore && buyScore >= 3) {
+            console.log(`Scores - Buy: ${buyScore}, Sell: ${sellScore}`);
+            
+            if (buyScore > sellScore && buyScore >= 2) {  // Lower threshold for better predictions
                 signalType = 'BUY';
-                icon = '📈';
+                icon = '🟢';
                 confidence = Math.min(95, 50 + buyScore * 10);
-                text = `توقع: شراء ${confidence}%`;
-            } else if (sellScore > buyScore && sellScore >= 3) {
+                text = `شراء ${confidence}%`;
+            } else if (sellScore > buyScore && sellScore >= 2) {  // Lower threshold
                 signalType = 'SELL';
-                icon = '📉';
+                icon = '🔴';
                 confidence = Math.min(95, 50 + sellScore * 10);
-                text = `توقع: بيع ${confidence}%`;
+                text = `بيع ${confidence}%`;
             } else if (volatility > 2) {
                 signalType = 'HOLD';
                 icon = '⚠️';
-                text = 'متذبذب - انتظار';
+                text = 'متذبذب';
+            } else if (buyScore === sellScore && buyScore > 0) {
+                signalType = 'HOLD';
+                icon = '🔄';
+                text = 'محايد';
             } else {
                 signalType = 'HOLD';
                 icon = '⏳';
-                text = 'تحليل جاري...';
+                text = 'تحليل...';
             }
         } else {
-            // No data available yet
-            icon = '⌛';
-            text = 'جاري تجميع البيانات...';
+            // No data available yet - show simple prediction based on last known state
+            const lastPrice = localStorage.getItem(`last_${assetId}`);
+            if (lastPrice) {
+                icon = '🔍';
+                text = 'تحليل أولي';
+            } else {
+                icon = '⌛';
+                text = 'تجميع بيانات';
+            }
         }
         
         return {
