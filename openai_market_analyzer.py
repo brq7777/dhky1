@@ -12,9 +12,8 @@ from datetime import datetime, timedelta
 from openai import OpenAI
 import requests
 
-# the newest OpenAI model is "gpt-5" which was released August 7, 2025.
-# do not change this unless explicitly requested by the user
-OPENAI_MODEL = "gpt-5"
+# استخدام GPT-3.5-turbo لأن الاشتراك لا يدعم GPT-5 حالياً
+OPENAI_MODEL = "gpt-3.5-turbo"
 
 class OpenAIMarketAnalyzer:
     """محلل السوق المتطور باستخدام OpenAI GPT-5"""
@@ -30,7 +29,7 @@ class OpenAIMarketAnalyzer:
             try:
                 self.client = OpenAI(api_key=self.api_key)
                 self.enabled = True
-                logging.info(f"✅ تم تفعيل OpenAI GPT-5 للتحليل المتقدم")
+                logging.info(f"✅ تم تفعيل OpenAI GPT-3.5-turbo للتحليل المتقدم")
             except Exception as e:
                 logging.error(f"❌ خطأ في تهيئة OpenAI: {e}")
                 self.client = None
@@ -64,7 +63,7 @@ class OpenAIMarketAnalyzer:
                 economic_news
             )
             
-            # التحليل باستخدام GPT-5
+            # التحليل باستخدام GPT-3.5-turbo
             response = self.client.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=[
@@ -102,7 +101,7 @@ class OpenAIMarketAnalyzer:
             return None
     
     def _get_system_prompt(self) -> str:
-        """الحصول على تعليمات النظام لـ GPT-5"""
+        """الحصول على تعليمات النظام لـ GPT-3.5-turbo"""
         return """أنت خبير تحليل مالي متخصص في الأسواق المالية مع خبرة عميقة في:
         1. التحليل الفني للمؤشرات (RSI, MACD, Bollinger Bands, Stochastic)
         2. التحليل الأساسي والأخبار الاقتصادية
@@ -497,7 +496,7 @@ def test_openai_connection() -> Dict:
         return {
             'connected': True,
             'status': 'success',
-            'message': 'تم الاتصال بنجاح مع OpenAI GPT-5',
+            'message': 'تم الاتصال بنجاح مع OpenAI GPT-3.5-turbo',
             'model': OPENAI_MODEL,
             'response': result
         }
