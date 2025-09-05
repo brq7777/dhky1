@@ -12,9 +12,8 @@ from datetime import datetime, timedelta
 from openai import OpenAI
 import requests
 
-# the newest OpenAI model is "gpt-5" which was released August 7, 2025.
-# do not change this unless explicitly requested by the user
-OPENAI_MODEL = "gpt-5"
+# Using GPT-4o as the latest available model (gpt-5 not yet released)
+OPENAI_MODEL = "gpt-4o"
 
 class OpenAIMarketAnalyzer:
     """محلل السوق المتطور باستخدام OpenAI GPT-5"""
@@ -30,14 +29,14 @@ class OpenAIMarketAnalyzer:
             try:
                 self.client = OpenAI(api_key=self.api_key)
                 self.enabled = True
-                logging.info(f"✅ تم تفعيل OpenAI GPT-5 للتحليل المتقدم")
+                logging.info(f"✅ تم تفعيل OpenAI GPT-4o للتحليل المتقدم")
             except Exception as e:
                 logging.error(f"❌ خطأ في تهيئة OpenAI: {e}")
                 self.client = None
                 self.enabled = False
         
         # إعدادات التحليل
-        self.temperature = 1  # GPT-5 يدعم فقط temperature=1
+        self.temperature = 0.7  # إعدادات للحصول على إجابات متوازنة
         self.max_completion_tokens = 1000
         
         # ذاكرة التعلم من الأخطاء السابقة

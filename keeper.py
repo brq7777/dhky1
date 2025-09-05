@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 
 # إعدادات المراقبة
-HEARTBEAT_URL = "https://heartbeat.uptimerobot.com/xxxxx"  # ضع رابط UptimeRobot هنا
+HEARTBEAT_URL = os.environ.get("HEARTBEAT_URL", "")  # رابط UptimeRobot اختياري
 PROJECT_URL = "https://laalyly-abodhayymreplit.replit.app"  # رابط مشروعك
 CHECK_INTERVAL = 60  # فترة التحقق بالثواني (دقيقة واحدة)
 TIMEOUT = 30  # مهلة الاستجابة

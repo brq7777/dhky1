@@ -22,4 +22,5 @@ dependencies = [
     "anthropic>=0.65.0",
     "numpy>=2.3.2",
     "pandas>=2.3.2",
+    "flask-limiter>=3.12",
 ]

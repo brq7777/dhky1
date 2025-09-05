@@ -2,6 +2,8 @@ import os
 import logging
 from datetime import timedelta, datetime
 from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_socketio import SocketIO, emit
 from flask_login import LoginManager, login_required, logout_user, current_user
 import threading
@@ -46,19 +48,27 @@ def load_user(user_id):
 # Initialize SocketIO with optimized settings for gevent
 socketio = SocketIO(app, 
                    cors_allowed_origins="*",
-                   ping_timeout=120,        # زيادة timeout مع gevent  
-                   ping_interval=25,        # فحص منتظم
+                   ping_timeout=60,         # تقليل timeout لتحسين الاستقرار  
+                   ping_interval=20,        # فحص أسرع
                    logger=False,
                    engineio_logger=False,
                    async_mode='gevent',     # تطابق مع gunicorn worker
                    transports=['polling'],  # polling للاستقرار
                    allow_upgrades=False,    # منع ترقيات غير مرغوبة
-                   cookie=None,             # إزالة cookies للتبسيط
-                   always_connect=True,     # ضمان الاتصال الدائم
+                   cookie='flask-socketio', # استخدام cookie للحفاظ على الجلسات
+                   always_connect=False,    # تحسين استقرار الاتصال
                    max_http_buffer_size=1000000)  # زيادة buffer size
 
 # Initialize price service
 price_service = PriceService()
+
+# Initialize rate limiter for security
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+)
 
 # تهيئة نظام الذكاء الاصطناعي المتكامل
 logging.info("🤖 تهيئة نظام الذكاء الاصطناعي المتكامل...")
@@ -518,10 +528,14 @@ def handle_disconnect():
 def handle_socketio_error(e):
     """Handle SocketIO errors including invalid sessions"""
     try:
-        logging.warning(f"SocketIO error handled: {str(e)}")
+        error_msg = str(e)
+        if "Invalid session" in error_msg:
+            logging.info(f"Invalid session error (expected during reconnections): {error_msg}")
+        else:
+            logging.warning(f"SocketIO error handled: {error_msg}")
         # لا نرسل emit هنا لتجنب loops
-    except:
-        pass
+    except Exception as handle_error:
+        logging.warning(f"Error in error handler: {handle_error}")
 
 @socketio.on('connect_error')
 def handle_connect_error(data):
