@@ -581,6 +581,120 @@ def handle_subscribe_alert(data):
         'type': alert_type
     })
 
+@socketio.on('random_analysis_signal')
+def handle_random_analysis_signal(data):
+    """Handle random analysis signal with OpenAI enhancement"""
+    try:
+        logging.info(f"🎯 Random analysis signal received: {data.get('asset_id')} - {data.get('type')} - {data.get('confidence')}%")
+        
+        # Track the random analysis signal with enhanced AI
+        enhanced_signal = data.copy()
+        
+        # Get asset data for comprehensive analysis
+        asset_id = data.get('asset_id')
+        asset_data = None
+        prices = price_service.get_all_prices()
+        
+        if isinstance(prices, list):
+            for p in prices:
+                if isinstance(p, dict) and p.get('id') == asset_id:
+                    asset_data = p
+                    break
+        
+        # Enhance with OpenAI if available and not quota exceeded
+        if openai_analyzer.enabled and data.get('confidence', 0) > 75:
+            try:
+                # Prepare market data for OpenAI analysis
+                market_data = {
+                    'rsi': data.get('technical_analysis', {}).get('rsi', 50),
+                    'trend': data.get('type', 'HOLD'),
+                    'volatility': data.get('technical_analysis', {}).get('volatility', 0),
+                    'sma_50': data.get('technical_analysis', {}).get('sma_short', 0),
+                    'sma_200': data.get('technical_analysis', {}).get('sma_long', 0),
+                    'timeframe': data.get('timeframe', 1)
+                }
+                
+                if asset_data:
+                    asset_data_for_ai = {
+                        'id': asset_data.get('id'),
+                        'name': asset_data.get('name'),
+                        'price': asset_data.get('price', data.get('price', 0)),
+                        'change_24h': asset_data.get('change_24h', 0),
+                        'volume': asset_data.get('volume', 0)
+                    }
+                    
+                    # Get comprehensive OpenAI analysis
+                    openai_analysis = openai_analyzer.analyze_with_economic_news(asset_data_for_ai, market_data)
+                    
+                    if openai_analysis and openai_analysis.get('confidence', 0) > 80:
+                        # OpenAI enhanced the signal
+                        enhanced_signal.update({
+                            'openai_enhanced': True,
+                            'openai_confidence': openai_analysis.get('confidence', 0),
+                            'openai_reasoning': openai_analysis.get('reasoning', ''),
+                            'stop_loss': openai_analysis.get('stop_loss', 0),
+                            'take_profit': openai_analysis.get('take_profit', 0),
+                            'risk_level': openai_analysis.get('risk_level', 'medium'),
+                            'news_impact': openai_analysis.get('news_impact', 'neutral'),
+                            'technical_score': openai_analysis.get('technical_score', 0),
+                            'fundamental_score': openai_analysis.get('fundamental_score', 0),
+                            'openai_recommendations': openai_analysis.get('recommendations', [])
+                        })
+                        
+                        # Update reason with OpenAI insights
+                        enhanced_signal['reason'] = f"{enhanced_signal.get('reason', '')} - تحليل GPT-5 المتقدم: {openai_analysis.get('reasoning', '')[:100]}..."
+                        
+                        # Update final confidence with OpenAI input
+                        original_confidence = enhanced_signal.get('confidence', 0)
+                        openai_conf = openai_analysis.get('confidence', 0)
+                        enhanced_signal['final_confidence'] = max(original_confidence, openai_conf)
+                        
+                        logging.info(f"✨ OpenAI enhanced random signal: {enhanced_signal['asset_id']} - Final confidence: {enhanced_signal.get('final_confidence')}%")
+                    else:
+                        logging.info(f"🤖 OpenAI analysis available but confidence too low: {openai_analysis.get('confidence', 0) if openai_analysis else 'None'}%")
+                
+            except Exception as openai_error:
+                logging.error(f"OpenAI enhancement error for random signal: {openai_error}")
+        
+        # Track with real trades tracker
+        try:
+            from real_trades_tracker import real_trades_tracker
+            trade_id = real_trades_tracker.track_real_signal(enhanced_signal)
+            enhanced_signal['trade_id'] = trade_id
+            logging.info(f"📊 Random signal tracked: {trade_id}")
+        except Exception as track_error:
+            logging.error(f"Error tracking random signal: {track_error}")
+        
+        # Save to database
+        try:
+            with app.app_context():
+                from models import TradingSignal, db
+                signal_record = TradingSignal(
+                    asset_id=enhanced_signal.get('asset_id'),
+                    signal_type=enhanced_signal.get('type'),
+                    price=enhanced_signal.get('price'),
+                    confidence=enhanced_signal.get('final_confidence', enhanced_signal.get('confidence')),
+                    ai_confidence=enhanced_signal.get('openai_confidence', enhanced_signal.get('ai_confidence', 0)),
+                    ai_analysis=str(enhanced_signal.get('openai_reasoning', enhanced_signal.get('reason', ''))),
+                    source='random_analysis'
+                )
+                db.session.add(signal_record)
+                db.session.commit()
+                logging.info(f"💾 Random signal saved to database")
+        except Exception as db_error:
+            logging.error(f"Database save error for random signal: {db_error}")
+        
+        # Emit enhanced signal back to all clients
+        socketio.emit('enhanced_random_signal', enhanced_signal)
+        logging.info(f"🎯 Enhanced random signal broadcasted: {enhanced_signal.get('type')} {enhanced_signal.get('asset_name')} ({enhanced_signal.get('timeframe')}min)")
+        
+    except Exception as e:
+        logging.error(f"Error handling random analysis signal: {e}")
+        socketio.emit('random_analysis_error', {
+            'error': str(e),
+            'timestamp': time.time()
+        })
+
 @socketio.on('start_timed_analysis')
 def handle_timed_analysis(data):
     """Handle timed analysis request with comprehensive AI analysis"""

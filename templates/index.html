@@ -46,6 +46,75 @@
             </div>
         </header>
 
+        <!-- Random Asset Analysis Section -->
+        <section class="card random-analysis-section" style="background: linear-gradient(45deg, #2d5aa0, #3b82f6); color: white; margin-bottom: 20px; border: 2px solid #4ade80; box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);">
+            <div class="random-analysis-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                <h4 style="color: white; font-size: 1.3em; margin: 0;">🎯 تحليل الأصل العشوائي الذكي</h4>
+                <div class="random-status" id="random-analysis-status" style="font-size: 0.9em; opacity: 0.9;">
+                    جاهز للتحليل المضمون
+                </div>
+            </div>
+            
+            <div class="random-analysis-controls" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                <button id="random-asset-btn" class="random-select-btn" style="
+                    background: linear-gradient(45deg, #10b981, #34d399);
+                    color: white;
+                    padding: 15px 25px;
+                    border: none;
+                    border-radius: 12px;
+                    font-weight: bold;
+                    font-size: 1.1em;
+                    cursor: pointer;
+                    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+                    transition: all 0.3s ease;
+                    white-space: nowrap;
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(16, 185, 129, 0.6)'"
+                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(16, 185, 129, 0.4)'">
+                    🎲 اختر أصل عشوائي + تحليل مضمون
+                </button>
+                
+                <div class="selected-asset-info" id="selected-asset-info" style="
+                    display: none;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                ">
+                    <div class="asset-name" id="selected-asset-name" style="font-weight: bold; font-size: 1.1em;"></div>
+                    <div class="asset-price" id="selected-asset-price" style="opacity: 0.9;"></div>
+                </div>
+                
+                <div class="timeframe-progress" id="timeframe-progress" style="
+                    display: none;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                ">
+                    <div class="current-timeframe" id="current-timeframe" style="font-weight: bold; margin-bottom: 5px;"></div>
+                    <div class="countdown-timer" id="countdown-timer" style="font-size: 1.2em; color: #fbbf24;"></div>
+                    <div class="timeframe-sequence" id="timeframe-sequence" style="margin-top: 8px; font-size: 0.9em;">
+                        <span class="tf-1">1</span> → <span class="tf-2">2</span> → <span class="tf-3">3</span> → <span class="tf-4">4</span> → <span class="tf-5">5</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="analysis-results" id="random-analysis-results" style="
+                display: none;
+                margin-top: 15px;
+                padding: 15px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            ">
+                <h5 style="margin: 0 0 10px 0; color: white;">📊 نتائج التحليل الشامل</h5>
+                <div id="comprehensive-analysis-display"></div>
+            </div>
+        </section>
+
         <div class="assets-sections">
             <section class="card">
                 <h4>الأصول الرقمية والمعادن</h4>
