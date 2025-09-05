@@ -46,14 +46,15 @@ def load_user(user_id):
 # Initialize SocketIO with minimal stable settings
 socketio = SocketIO(app, 
                    cors_allowed_origins="*",
-                   ping_timeout=300,        # مهلة طويلة جداً
-                   ping_interval=120,       # فحص نادر
+                   ping_timeout=60,         # تقليل المهلة لتجنب worker timeout
+                   ping_interval=25,        # فحص أكثر تكراراً ولكن أقصر
                    logger=False,
                    engineio_logger=False,
                    async_mode='threading',  
                    transports=['polling'],  # polling فقط للاستقرار الأقصى
                    allow_upgrades=False,    # منع أي ترقيات
-                   cookie=False)
+                   cookie=False,
+                   max_http_buffer_size=100000)  # تحديد حجم buffer لتجنب الحمل الزائد
 
 # Initialize price service
 price_service = PriceService()
@@ -95,7 +96,7 @@ with app.app_context():
     
     # إنشاء المستخدم الافتراضي كمدير
     admin_email = "brq7787@gmail.com"
-    admin_password = "Msken2009"
+    admin_password = os.environ.get("ADMIN_PASSWORD", "temp_change_me_123!")
     
     admin_user = User()
     admin_user.email = admin_email
@@ -701,12 +702,12 @@ def price_monitor():
                 # Only send updates every few cycles to avoid overwhelming the connection
                 cycle_count += 1
                 
-                # إرسال تحديثات الأسعار كل 5 ثوان فقط لتقليل الحمل
-                if cycle_count % 5 == 0:
+                # إرسال تحديثات الأسعار كل 8 ثوان لتقليل الحمل أكثر
+                if cycle_count % 8 == 0:
                     socketio.emit('price_update', prices)
                 
-                # إرسال حالة النظام كل 10 ثوان
-                if cycle_count % 10 == 0:
+                # إرسال حالة النظام كل 15 ثانية
+                if cycle_count % 15 == 0:
                     status = price_service.get_system_status()
                     socketio.emit('system_status', status)
             
@@ -821,6 +822,35 @@ def price_monitor():
                         except Exception as e:
                             logging.error(f"Error tracking AI-enhanced signal: {e}")
                         
+                        # حفظ الإشارة في قاعدة البيانات
+                        try:
+                            with app.app_context():  # إضافة app context للحفظ الآمن
+                                from models import TradingSignal
+                                signal_record = TradingSignal(
+                                    asset_id=enhanced_signal.get('asset_id'),
+                                    asset_name=enhanced_signal.get('asset_name'),
+                                    signal_type=enhanced_signal.get('type'),
+                                    price=enhanced_signal.get('price'),
+                                    confidence=enhanced_signal.get('confidence'),
+                                    reason=enhanced_signal.get('reason'),
+                                    rsi=enhanced_signal.get('rsi'),
+                                    sma_short=enhanced_signal.get('sma_short'),
+                                    sma_long=enhanced_signal.get('sma_long'),
+                                    price_change_5=enhanced_signal.get('price_change_5'),
+                                    trend=enhanced_signal.get('trend'),
+                                    ai_confidence=enhanced_signal.get('ai_confidence'),
+                                    ai_analysis=str(enhanced_signal.get('ai_recommendations', []))
+                                )
+                                db.session.add(signal_record)
+                                db.session.commit()
+                                logging.info(f"💾 Signal saved to database: {enhanced_signal.get('type')} {enhanced_signal.get('asset_id')}")
+                        except Exception as db_error:
+                            try:
+                                db.session.rollback()
+                            except:
+                                pass
+                            logging.error(f"❌ Database save error: {db_error}")
+                        
                         socketio.emit('trading_signal', enhanced_signal)
                         logging.info(f"🧠 Unified AI signal: {enhanced_signal['type']} {enhanced_signal['asset_name']} (Quality: {quality_analysis['quality_score']}/100)")
                         
@@ -865,6 +895,31 @@ def price_monitor():
                                         'take_profit': openai_analysis.get('take_profit', 0),
                                         'reason': f"OpenAI GPT-5 تحليل متقدم: {openai_analysis.get('reasoning', '')[:100]}"
                                     })
+                                    
+                                    # حفظ إشارة OpenAI في قاعدة البيانات
+                                    try:
+                                        with app.app_context():  # إضافة app context للحفظ الآمن
+                                            from models import TradingSignal
+                                            signal_record = TradingSignal(
+                                                asset_id=enhanced_signal.get('asset_id'),
+                                                asset_name=enhanced_signal.get('asset_name'),
+                                                signal_type=enhanced_signal.get('type'),
+                                                price=enhanced_signal.get('price'),
+                                                confidence=enhanced_signal.get('confidence', enhanced_signal.get('openai_confidence')),
+                                                reason=enhanced_signal.get('reason'),
+                                                rsi=enhanced_signal.get('rsi'),
+                                                ai_confidence=enhanced_signal.get('openai_confidence'),
+                                                ai_analysis=enhanced_signal.get('openai_reasoning', '')
+                                            )
+                                            db.session.add(signal_record)
+                                            db.session.commit()
+                                            logging.info(f"💾 OpenAI signal saved to database: {enhanced_signal.get('type')} {enhanced_signal.get('asset_id')}")
+                                    except Exception as db_error:
+                                        try:
+                                            db.session.rollback()
+                                        except:
+                                            pass
+                                        logging.error(f"❌ OpenAI Database save error: {db_error}")
                                     
                                     socketio.emit('trading_signal', enhanced_signal)
                                     logging.info(f"🎆 OpenAI override signal: {enhanced_signal['type']} {enhanced_signal['asset_name']}")
