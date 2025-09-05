@@ -1603,6 +1603,11 @@ class TradingDashboard {
     displayAIPerformance(aiData) {
         console.log('🧠 عرض أداء الذكاء الاصطناعي:', aiData);
         
+        // تحديث لوحة الذكاء الاصطناعي المتقدمة أولاً
+        if (this.updateAdvancedAIDashboard) {
+            this.updateAdvancedAIDashboard(aiData);
+        }
+        
         // عرض حالة الذكاء الاصطناعي
         const aiStatusElement = document.getElementById('ai-status');
         if (aiStatusElement) {
