@@ -1,0 +1,10 @@
+flask
+flask-socketio
+eventlet
+requests
+pandas
+numpy
+scikit-learn
+transformers
+beautifulsoup4
+lxml
