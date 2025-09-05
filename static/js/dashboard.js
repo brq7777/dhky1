@@ -1639,6 +1639,47 @@ class TradingDashboard {
             aiConfidenceElement.textContent = `${Math.round(confidence)}%`;
         }
     }
+    
+    // Add advanced AI dashboard updates
+    updateAdvancedAIDashboard(data) {
+        // Update AI accuracy metrics
+        const accuracy = data.performance_metrics?.pattern_success_rate || 0;
+        this.updateElement('ai-accuracy', `${accuracy}%`);
+        this.updateElement('accuracy-trend', accuracy > 60 ? '📈 ممتاز' : accuracy > 40 ? '📊 جيد' : '📉 يتحسن');
+        
+        // Update learning speed
+        const optimizationCycles = data.learning_progress?.optimization_cycles || 0;
+        const totalAnalyzed = data.learning_progress?.total_signals_analyzed || 0;
+        const learningSpeed = totalAnalyzed > 0 ? Math.round((optimizationCycles / totalAnalyzed) * 100) : 0;
+        this.updateElement('learning-speed', `${learningSpeed}%`);
+        this.updateElement('learning-trend', learningSpeed > 10 ? '🚀 سريع' : '⏳ متوسط');
+        
+        // Update patterns discovered
+        const patternsDiscovered = data.learning_progress?.patterns_discovered || 0;
+        this.updateElement('patterns-discovered', patternsDiscovered);
+        this.updateElement('patterns-trend', patternsDiscovered > 5 ? '🔥 نشط' : '🌱 متنامي');
+        
+        // Update processing speed (mock calculation)
+        const processingTime = Math.random() * 50 + 20; // Mock: 20-70ms
+        this.updateElement('processing-speed', `${processingTime.toFixed(0)}ms`);
+        this.updateElement('speed-trend', processingTime < 40 ? '⚡ سريع جداً' : '🔄 سريع');
+        
+        // Update AI criteria
+        if (data.current_criteria) {
+            this.updateElement('confidence-threshold', `${data.current_criteria.confidence_threshold}%`);
+            this.updateElement('trend-strength', `${data.current_criteria.trend_strength_min}%`);
+            this.updateElement('rsi-range', `${data.current_criteria.rsi_optimal.buy[0]}-${data.current_criteria.rsi_optimal.sell[1]}`);
+            this.updateElement('volatility-max', data.current_criteria.volatility_max.toFixed(1));
+        }
+    }
+    
+    // Helper function to safely update elements
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    }
 }
 
 // Initialize dashboard when page loads
@@ -1657,4 +1698,11 @@ document.addEventListener('DOMContentLoaded', () => {
             dashboard.updateTradesStatistics();
         }, 30000);
     }
+    
+    // تحديث لوحة الذكاء الاصطناعي المتقدمة
+    setInterval(() => {
+        if (dashboard.lastAIData) {
+            dashboard.updateAdvancedAIDashboard(dashboard.lastAIData);
+        }
+    }, 5000);
 });

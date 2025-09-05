@@ -20,13 +20,13 @@ class AISignalOptimizer:
         self.failure_patterns = {}  # أنماط الإشارات الفاشلة
         self.market_conditions = {}  # ظروف السوق المختلفة
         
-        # معاملات التحسين الذكية
+        # معاملات التحسين الذكية المحسنة
         self.success_weights = {
             'rsi_optimal': {'buy': (20, 45), 'sell': (55, 80)},
-            'trend_strength_min': 70,
-            'confidence_threshold': 85,
-            'volatility_max': 1.0,
-            'price_momentum_min': 0.5
+            'trend_strength_min': 65,  # خفض للمزيد من الحساسية
+            'confidence_threshold': 80,  # خفض قليلاً لتعلم أسرع
+            'volatility_max': 1.2,  # زيادة طفيفة للمرونة
+            'price_momentum_min': 0.4  # خفض للمزيد من الإشارات
         }
         
         # إحصائيات التعلم
@@ -294,16 +294,21 @@ class AISignalOptimizer:
         """تعديل الأوزان بناءً على التعلم المكتسب"""
         
         total_patterns = len(self.signal_patterns) + len(self.failure_patterns)
-        if total_patterns < 5:
+        if total_patterns < 3:  # تقليل العتبة للتعلم الأسرع
             return
         
         success_rate = len(self.signal_patterns) / total_patterns * 100
         
-        if success_rate < 60:
-            # تشديد المعايير
-            self.success_weights['trend_strength_min'] = min(85, self.success_weights['trend_strength_min'] + 5)
-            self.success_weights['confidence_threshold'] = min(95, self.success_weights['confidence_threshold'] + 2)
+        if success_rate < 50:  # خفض العتبة لتحسين أسرع
+            # تشديد المعايير تدريجياً
+            self.success_weights['trend_strength_min'] = min(80, self.success_weights['trend_strength_min'] + 3)
+            self.success_weights['confidence_threshold'] = min(90, self.success_weights['confidence_threshold'] + 1)
             logging.info("🔧 AI شدد المعايير لتحسين معدل النجاح")
+        elif success_rate > 70:  # إضافة تحسين للنجاح العالي
+            # تخفيف المعايير للمزيد من الفرص
+            self.success_weights['trend_strength_min'] = max(60, self.success_weights['trend_strength_min'] - 2)
+            self.success_weights['volatility_max'] = min(1.5, self.success_weights['volatility_max'] + 0.1)
+            logging.info("🚀 AI خفف المعايير للاستفادة من الأداء الجيد")
         
         # حساب تحسن معدل النجاح
         if hasattr(self, '_previous_success_rate'):
