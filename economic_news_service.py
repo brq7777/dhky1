@@ -100,6 +100,10 @@ class EconomicNewsService:
                 # معالجة الأخبار
                 processed_news = []
                 for article in articles:
+                    # التأكد من أن article صحيح
+                    if not isinstance(article, dict) or not article:
+                        continue
+                    
                     news_item = {
                         'title': article.get('title', ''),
                         'description': article.get('description', ''),
@@ -160,6 +164,10 @@ class EconomicNewsService:
                 
                 processed_news = []
                 for article in articles:
+                    # التأكد من أن article صحيح
+                    if not isinstance(article, dict) or not article:
+                        continue
+                    
                     news_item = {
                         'title': article.get('title', ''),
                         'description': article.get('description', ''),
@@ -233,6 +241,14 @@ class EconomicNewsService:
     
     def _analyze_impact(self, article: Dict) -> Dict:
         """تحليل تأثير الخبر على السوق"""
+        # التأكد من أن article هو dictionary وليس string
+        if isinstance(article, str):
+            return {
+                'type': 'neutral',
+                'score': 50,
+                'confidence': 0.5
+            }
+        
         title = (article.get('title') or '').lower()
         description = (article.get('description') or '').lower()
         content = f"{title} {description}"
