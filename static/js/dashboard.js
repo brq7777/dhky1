@@ -163,6 +163,16 @@ class TradingDashboard {
             console.error('Timed analysis error:', data);
             this.finishTimedAnalysis(data.asset_id);
         });
+        
+        this.socket.on('enhanced_random_signal', (data) => {
+            console.log('Enhanced random signal received:', data);
+            this.displayEnhancedRandomSignal(data);
+        });
+        
+        this.socket.on('random_analysis_error', (data) => {
+            console.error('Random analysis error:', data);
+            this.showRandomAnalysisError(data.error);
+        });
     }
     
     updateAutoRefreshButton(btn) {
@@ -1749,13 +1759,16 @@ class TradingDashboard {
         // Update timeframe progress
         this.updateTimeframeProgress(currentTimeframe);
         
-        // Start countdown for current timeframe
-        const timeframeSeconds = currentTimeframe * 60;
+        // Start countdown for current timeframe (shortened for testing - 5 seconds per minute)
+        const timeframeSeconds = currentTimeframe * 5; // 5 seconds instead of 60 for quick testing
         await this.startTimeframeCountdown(timeframeSeconds, currentTimeframe);
         
         // Perform comprehensive analysis for this timeframe
         const analysisResult = await this.performComprehensiveAnalysis(currentAsset, currentTimeframe);
         this.randomAnalysisState.analysisResults.push(analysisResult);
+        
+        // Show signal result immediately and prominently
+        this.showImmediateSignalResult(analysisResult.finalSignal, currentTimeframe);
         
         // Move to next timeframe
         this.randomAnalysisState.currentTimeframe++;
@@ -2097,18 +2110,24 @@ class TradingDashboard {
             
             resultDiv.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="font-weight: bold; color: white;">
-                        ${signal.icon} الفريم ${timeframe} دقيقة: ${signal.type}
+                    <div style="font-weight: bold; color: white; font-size: 1.1em;">
+                        ${signal.icon} الفريم ${timeframe} دقيقة: <span style="color: ${signal.type === 'BUY' ? '#10b981' : '#ef4444'};">${signal.type === 'BUY' ? 'شراء' : 'بيع'}</span>
                     </div>
-                    <div style="color: #fbbf24; font-weight: bold;">
+                    <div style="color: #fbbf24; font-weight: bold; font-size: 1.1em;">
                         ${signal.confidence}% ثقة
                     </div>
                 </div>
-                <div style="font-size: 0.9em; opacity: 0.9; color: white;">
+                <div style="font-size: 0.9em; opacity: 0.9; color: white; margin-bottom: 8px;">
                     ${signal.reason}
                 </div>
                 <div style="margin-top: 5px; font-size: 0.8em; opacity: 0.8; color: white;">
                     📊 فني: ${signal.technical_analysis.score} | 🧠 AI: ${Math.floor(signal.ai_analysis.score)} | 📰 أخبار: ${signal.news_analysis.score}
+                </div>
+                <div style="margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                    <div style="color: #34d399; font-size: 0.9em; font-weight: bold;">💡 توصيات التحليل:</div>
+                    <div style="color: white; font-size: 0.8em; margin-top: 4px;">
+                        ${signal.technical_analysis.signals.join('<br>')}
+                    </div>
                 </div>
             `;
             
@@ -2119,17 +2138,262 @@ class TradingDashboard {
                 this.socket.emit('random_analysis_signal', signal);
             }
             
-            // Show signal notification
-            this.showSignalNotification(signal);
+            // Show large signal notification immediately
+            this.showEnhancedSignalNotification(signal, timeframe);
             
             // Play alert sound for strong signals
-            if (signal.confidence > 75) {
+            if (signal.confidence > 70) {
                 this.playAlertSound({ 
                     frequency: signal.type === 'BUY' ? 1200 : 800, 
                     duration: 500 
                 });
             }
         }
+    }
+    
+    displayEnhancedRandomSignal(data) {
+        console.log('🎯 عرض الإشارة المحسنة:', data);
+        
+        // إظهار الإشارة في منطقة منفصلة مميزة
+        this.showMainSignalDisplay(data);
+        
+        // إشعار صوتي ومرئي
+        if (data.confidence > 80) {
+            this.playAlertSound({ 
+                frequency: data.type === 'BUY' ? 1500 : 700, 
+                duration: 800 
+            });
+            
+            // إشعار منبثق كبير
+            this.showEnhancedSignalNotification(data, data.timeframe || 'متعدد');
+        }
+    }
+    
+    showMainSignalDisplay(signal) {
+        const resultsElement = document.getElementById('random-analysis-results');
+        const displayElement = document.getElementById('comprehensive-analysis-display');
+        
+        if (resultsElement && displayElement) {
+            resultsElement.style.display = 'block';
+            
+            // Clear previous results
+            displayElement.innerHTML = '';
+            
+            // Create main signal display
+            const mainSignalDiv = document.createElement('div');
+            mainSignalDiv.className = 'main-signal-display';
+            mainSignalDiv.style.cssText = `
+                padding: 20px;
+                background: linear-gradient(45deg, ${signal.type === 'BUY' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}, rgba(255, 255, 255, 0.1));
+                border-radius: 12px;
+                border: 2px solid ${signal.type === 'BUY' ? '#10b981' : '#ef4444'};
+                margin-bottom: 20px;
+                animation: signalPulse 2s ease-in-out infinite;
+            `;
+            
+            const signalTypeArabic = signal.type === 'BUY' ? 'شراء' : signal.type === 'SELL' ? 'بيع' : 'انتظار';
+            const signalIcon = signal.type === 'BUY' ? '🟢' : signal.type === 'SELL' ? '🔴' : '⏸️';
+            
+            mainSignalDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 2em; margin-bottom: 10px;">${signalIcon}</div>
+                    <div style="font-size: 1.8em; font-weight: bold; color: white; margin-bottom: 5px;">
+                        إشارة ${signalTypeArabic}
+                    </div>
+                    <div style="font-size: 1.3em; color: #fbbf24; font-weight: bold;">
+                        ${signal.asset_name || signal.asset_id}
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div style="text-align: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <div style="color: #9ca3af; font-size: 0.9em;">مستوى الثقة</div>
+                        <div style="color: #fbbf24; font-size: 1.4em; font-weight: bold;">${signal.confidence || signal.final_confidence}%</div>
+                    </div>
+                    <div style="text-align: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <div style="color: #9ca3af; font-size: 0.9em;">السعر الحالي</div>
+                        <div style="color: white; font-size: 1.2em; font-weight: bold;">$${signal.price}</div>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <div style="color: #34d399; font-size: 1em; font-weight: bold; margin-bottom: 8px;">🧠 تحليل الذكاء الاصطناعي:</div>
+                    <div style="color: white; font-size: 0.9em; line-height: 1.4;">
+                        ${signal.reason || signal.openai_reasoning || 'تحليل شامل متقدم'}
+                    </div>
+                </div>
+                
+                ${signal.openai_enhanced ? `
+                <div style="background: linear-gradient(45deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.1)); padding: 12px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                    <div style="color: #10b981; font-size: 1em; font-weight: bold; margin-bottom: 8px;">✨ تحسين GPT-5:</div>
+                    <div style="color: white; font-size: 0.9em;">
+                        ${signal.openai_reasoning ? signal.openai_reasoning.substring(0, 200) + '...' : 'تحليل متقدم بالذكاء الاصطناعي'}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            displayElement.appendChild(mainSignalDiv);
+            
+            // إضافة CSS للأنيميشن
+            if (!document.getElementById('signal-animations')) {
+                const style = document.createElement('style');
+                style.id = 'signal-animations';
+                style.textContent = `
+                    @keyframes signalPulse {
+                        0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+                        50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.6); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+    }
+    
+    showEnhancedSignalNotification(signal, timeframe) {
+        const notificationDiv = document.createElement('div');
+        notificationDiv.className = 'enhanced-signal-notification';
+        notificationDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, ${signal.type === 'BUY' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)'}, rgba(0,0,0,0.8));
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            z-index: 10001;
+            font-weight: bold;
+            text-align: center;
+            min-width: 350px;
+            animation: enhancedSignalShow 0.8s ease-out;
+            border: 2px solid ${signal.type === 'BUY' ? '#10b981' : '#ef4444'};
+        `;
+        
+        const signalTypeArabic = signal.type === 'BUY' ? 'شراء' : signal.type === 'SELL' ? 'بيع' : 'انتظار';
+        const signalIcon = signal.type === 'BUY' ? '🟢' : signal.type === 'SELL' ? '🔴' : '⏸️';
+        
+        notificationDiv.innerHTML = `
+            <div style="font-size: 3em; margin-bottom: 15px;">${signalIcon}</div>
+            <div style="font-size: 1.5em; margin-bottom: 10px;">إشارة ${signalTypeArabic} مؤكدة!</div>
+            <div style="font-size: 1.2em; margin-bottom: 10px; color: #fbbf24;">${signal.asset_name || signal.asset_id}</div>
+            <div style="font-size: 1em; margin-bottom: 15px;">الفريم ${timeframe} دقيقة</div>
+            <div style="font-size: 1.3em; margin-bottom: 10px;">ثقة: ${signal.confidence || signal.final_confidence}%</div>
+            <div style="font-size: 0.9em; opacity: 0.9;">السعر: $${signal.price}</div>
+        `;
+        
+        document.body.appendChild(notificationDiv);
+        
+        // إضافة CSS للأنيميشن
+        if (!document.getElementById('enhanced-signal-animations')) {
+            const style = document.createElement('style');
+            style.id = 'enhanced-signal-animations';
+            style.textContent = `
+                @keyframes enhancedSignalShow {
+                    0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+                    50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+                    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Remove notification after 5 seconds
+        setTimeout(() => {
+            notificationDiv.style.animation = 'enhancedSignalShow 0.5s ease-in reverse';
+            setTimeout(() => {
+                if (document.body.contains(notificationDiv)) {
+                    document.body.removeChild(notificationDiv);
+                }
+            }, 500);
+        }, 5000);
+    }
+    
+    showImmediateSignalResult(signal, timeframe) {
+        // Display the signal result immediately and prominently
+        console.log(`🎯 إظهار إشارة فورية للفريم ${timeframe}:`, signal.type, signal.confidence + '%');
+        
+        // Show in main analysis display
+        this.displayTimeframeAnalysisResult(signal, timeframe);
+        
+        // Show large notification for strong signals
+        if (signal.confidence > 70) {
+            this.showEnhancedSignalNotification(signal, timeframe);
+            
+            // Play distinctive sound
+            this.playAlertSound({ 
+                frequency: signal.type === 'BUY' ? 1400 : 900, 
+                duration: 600 
+            });
+        }
+        
+        // Update status to show current signal
+        const statusElement = document.getElementById('random-analysis-status');
+        if (statusElement) {
+            const signalTypeArabic = signal.type === 'BUY' ? 'شراء' : signal.type === 'SELL' ? 'بيع' : 'انتظار';
+            const signalIcon = signal.type === 'BUY' ? '🟢' : signal.type === 'SELL' ? '🔴' : '⏸️';
+            statusElement.innerHTML = `${signalIcon} إشارة ${signalTypeArabic} - الفريم ${timeframe} دقيقة - ثقة ${signal.confidence}%`;
+            statusElement.style.color = signal.type === 'BUY' ? '#10b981' : signal.type === 'SELL' ? '#ef4444' : '#6b7280';
+        }
+        
+        // Briefly highlight the timeframe sequence
+        const sequenceElement = document.getElementById('timeframe-sequence');
+        if (sequenceElement) {
+            const tfElement = sequenceElement.querySelector(`.tf-${timeframe}`);
+            if (tfElement) {
+                tfElement.style.background = signal.type === 'BUY' ? '#10b981' : '#ef4444';
+                tfElement.style.color = 'white';
+                tfElement.style.padding = '2px 6px';
+                tfElement.style.borderRadius = '4px';
+                tfElement.innerHTML = `${timeframe} ${signal.type === 'BUY' ? '📈' : '📉'}`;
+            }
+        }
+    }
+    
+    showRandomAnalysisError(error) {
+        const statusElement = document.getElementById('random-analysis-status');
+        if (statusElement) {
+            statusElement.textContent = `❌ خطأ في التحليل: ${error}`;
+            statusElement.style.color = '#ef4444';
+        }
+        
+        // Reset button
+        this.updateRandomAnalysisUI('completed');
+        
+        // Show error notification
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(185, 28, 28, 0.95));
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-weight: bold;
+            min-width: 300px;
+        `;
+        
+        errorDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">❌</span>
+                <div>
+                    <div style="margin-bottom: 5px;">خطأ في التحليل العشوائي</div>
+                    <div style="font-size: 12px; opacity: 0.9;">${error}</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => {
+            if (document.body.contains(errorDiv)) {
+                document.body.removeChild(errorDiv);
+            }
+        }, 5000);
     }
     
     completeRandomAnalysis() {

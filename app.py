@@ -671,12 +671,13 @@ def handle_random_analysis_signal(data):
                 from models import TradingSignal, db
                 signal_record = TradingSignal(
                     asset_id=enhanced_signal.get('asset_id'),
+                    asset_name=enhanced_signal.get('asset_name', enhanced_signal.get('asset_id')),
                     signal_type=enhanced_signal.get('type'),
                     price=enhanced_signal.get('price'),
                     confidence=enhanced_signal.get('final_confidence', enhanced_signal.get('confidence')),
+                    reason=enhanced_signal.get('reason', 'إشارة من التحليل العشوائي'),
                     ai_confidence=enhanced_signal.get('openai_confidence', enhanced_signal.get('ai_confidence', 0)),
-                    ai_analysis=str(enhanced_signal.get('openai_reasoning', enhanced_signal.get('reason', ''))),
-                    source='random_analysis'
+                    ai_analysis=str(enhanced_signal.get('openai_reasoning', enhanced_signal.get('reason', '')))
                 )
                 db.session.add(signal_record)
                 db.session.commit()
