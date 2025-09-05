@@ -43,18 +43,19 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Initialize SocketIO with minimal stable settings
+# Initialize SocketIO with optimized settings for gevent
 socketio = SocketIO(app, 
                    cors_allowed_origins="*",
-                   ping_timeout=60,         # تقليل المهلة لتجنب worker timeout
-                   ping_interval=25,        # فحص أكثر تكراراً ولكن أقصر
+                   ping_timeout=120,        # زيادة timeout مع gevent  
+                   ping_interval=25,        # فحص منتظم
                    logger=False,
                    engineio_logger=False,
-                   async_mode='threading',  
-                   transports=['polling'],  # polling فقط للاستقرار الأقصى
-                   allow_upgrades=False,    # منع أي ترقيات
-                   cookie=False,
-                   max_http_buffer_size=100000)  # تحديد حجم buffer لتجنب الحمل الزائد
+                   async_mode='gevent',     # تطابق مع gunicorn worker
+                   transports=['polling'],  # polling للاستقرار
+                   allow_upgrades=False,    # منع ترقيات غير مرغوبة
+                   cookie=None,             # إزالة cookies للتبسيط
+                   always_connect=True,     # ضمان الاتصال الدائم
+                   max_http_buffer_size=1000000)  # زيادة buffer size
 
 # Initialize price service
 price_service = PriceService()
@@ -509,7 +510,24 @@ def handle_disconnect():
     # Clean up any client-specific data
     try:
         # تنظيف البيانات المرتبطة بالعميل
-        pass  # تمت إزالة هذه الوظيفة مؤقتاً
+        pass
+    except:
+        pass
+
+@socketio.on_error_default
+def handle_socketio_error(e):
+    """Handle SocketIO errors including invalid sessions"""
+    try:
+        logging.warning(f"SocketIO error handled: {str(e)}")
+        # لا نرسل emit هنا لتجنب loops
+    except:
+        pass
+
+@socketio.on('connect_error')
+def handle_connect_error(data):
+    """Handle connection errors"""
+    try:
+        logging.warning(f"Connection error: {data}")
     except:
         pass
 

@@ -340,13 +340,30 @@ class EconomicNewsService:
                 'confidence': 0
             }
         
+        # فحص أن news_list هو قائمة dictionaries
+        if not isinstance(news_list, list):
+            logging.warning(f"news_list ليس قائمة: {type(news_list)}")
+            return {
+                'sentiment': 'neutral',
+                'score': 50,
+                'confidence': 0
+            }
+        
         total_score = 0
         total_confidence = 0
         
         for news in news_list:
+            # التأكد من أن news هو dictionary
+            if not isinstance(news, dict):
+                logging.warning(f"خبر غير صحيح: {type(news)} - {news}")
+                continue
+                
             impact = news.get('impact', {})
-            score = impact.get('score', 50)
-            confidence = impact.get('confidence', 50)
+            if not isinstance(impact, dict):
+                impact = {}
+                
+            score = impact.get('score', 50) if isinstance(impact, dict) else 50
+            confidence = impact.get('confidence', 50) if isinstance(impact, dict) else 50
             
             total_score += score * (confidence / 100)
             total_confidence += confidence
